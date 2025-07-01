@@ -1,0 +1,743 @@
+:root {
+    /* Layout Constants - consistent across all themes */
+    --header-height: 64px;
+    --tab-button-height: 52px;
+    --padding-base: 1.5rem;
+    --border-radius-base: 12px;
+    --transition-speed: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+    AMOLED DARK THEME (Default)
+    ======================================== */
+:root,
+[data-theme="default-dark"],
+[data-theme="amoled-dark"] {
+    /* Background Colors */
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0a;
+    --bg-tertiary: #111111;
+    --bg-hover: #1a1a1a;
+    --bg-active: #222222;
+
+    /* Text Colors */
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #888888;
+
+    /* Accent Colors */
+    --accent-primary: #ffffff;
+    --accent-secondary: #f0f0f0;
+    --accent-hover: #f5f5f5;
+    --accent-active: #e0e0e0;
+    --accent-glow: rgba(255, 255, 255, 0.3);
+
+    /* Borders */
+    --border: #333333;
+    --border-light: #2a2a2a;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(255, 255, 255, 0.05), 0 1px 2px rgba(255, 255, 255, 0.1);
+    --shadow-md: 0 4px 6px rgba(255, 255, 255, 0.1), 0 1px 3px rgba(255, 255, 255, 0.05);
+    --shadow-lg: 0 10px 25px rgba(255, 255, 255, 0.1), 0 5px 10px rgba(255, 255, 255, 0.05);
+
+    /* Status Colors */
+    --success: #00ff00;
+    --warning: #ffff00;
+    --danger: #ff0000;
+    --info: #00ffff;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+    --gradient-accent: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+}
+
+/* ========================================
+    DEFAULT LIGHT THEME
+    ======================================== */
+[data-theme="default-light"] {
+    /* Background Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --bg-hover: #d0d0d0;
+    --bg-active: #c0c0c0;
+
+    /* Text Colors */
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+
+    /* Accent Colors */
+    --accent-primary: #000000;
+    --accent-secondary: #1a1a1a;
+    --accent-hover: #333333;
+    --accent-active: #555555;
+    --accent-glow: rgba(0, 0, 0, 0.3);
+
+    /* Borders */
+    --border: #cccccc;
+    --border-light: #d0d0d0;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(0, 0, 0, 0.05);
+
+    /* Status Colors */
+    --success: #008000;
+    --warning: #cc9900;
+    --danger: #cc0000;
+    --info: #006666;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+    --gradient-accent: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+}
+
+/* ========================================
+    BLUE DARK THEME
+    ======================================== */
+[data-theme="blue-dark"] {
+    /* Background Colors */
+    --bg-primary: #00071c;
+    --bg-secondary: #0d1a3b;
+    --bg-tertiary: #1c3a7a;
+    --bg-hover: #26478d;
+    --bg-active: #3355a0;
+
+    /* Text Colors */
+    --text-primary: #f0f8ff;
+    --text-secondary: #b3c0d6;
+    --text-muted: #8fa4c3;
+
+    /* Accent Colors */
+    --accent-primary: #007bff;
+    --accent-secondary: #3399ff;
+    --accent-hover: #47a9ff;
+    --accent-active: #005bb3;
+    --accent-glow: rgba(71, 209, 255, 0.3);
+
+    /* Borders */
+    --border: #1a509e;
+    --border-light: #2c67c2;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(71, 209, 255, 0.05), 0 1px 2px rgba(71, 209, 255, 0.1);
+    --shadow-md: 0 4px 6px rgba(71, 209, 255, 0.1), 0 1px 3px rgba(71, 209, 255, 0.05);
+    --shadow-lg: 0 10px 25px rgba(71, 209, 255, 0.1), 0 5px 10px rgba(71, 209, 255, 0.05);
+
+    /* Status Colors */
+    --success: #00e600;
+    --warning: #e6e600;
+    --danger: #e60000;
+    --info: #00cccc;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #00071c 0%, #0d1a3b 100%);
+    --gradient-accent: linear-gradient(135deg, #007bff 0%, #3399ff 100%);
+}
+
+/* ========================================
+    BLUE LIGHT THEME
+    ======================================== */
+[data-theme="blue-light"] {
+    /* Background Colors */
+    --bg-primary: #f0f8ff;
+    --bg-secondary: #dce7ff;
+    --bg-tertiary: #a9c2e3;
+    --bg-hover: #c3d7f2;
+    --bg-active: #a0b8de;
+
+    /* Text Colors */
+    --text-primary: #00071c;
+    --text-secondary: #1c3a7a;
+    --text-muted: #4a5e96;
+
+    /* Accent Colors */
+    --accent-primary: #007bff;
+    --accent-secondary: #005bb3;
+    --accent-hover: #0056b3;
+    --accent-active: #3399ff;
+    --accent-glow: rgba(0, 123, 255, 0.3);
+
+    /* Borders */
+    --border: #7d9ad1;
+    --border-light: #afc6eb;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 123, 255, 0.12), 0 1px 2px rgba(0, 123, 255, 0.24);
+    --shadow-md: 0 4px 6px rgba(0, 123, 255, 0.1), 0 1px 3px rgba(0, 123, 255, 0.08);
+    --shadow-lg: 0 10px 25px rgba(0, 123, 255, 0.1), 0 5px 10px rgba(0, 123, 255, 0.05);
+
+    /* Status Colors */
+    --success: #008000;
+    --warning: #cc9900;
+    --danger: #cc0000;
+    --info: #006666;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #f0f8ff 0%, #dce7ff 100%);
+    --gradient-accent: linear-gradient(135deg, #007bff 0%, #005bb3 100%);
+}
+
+/* ========================================
+    RED DARK THEME
+    ======================================== */
+[data-theme="red-dark"] {
+    /* Background Colors */
+    --bg-primary: #0d0004;
+    --bg-secondary: #1a0c0e;
+    --bg-tertiary: #5e0010;
+    --bg-hover: #7a0212;
+    --bg-active: #9e001c;
+
+    /* Text Colors */
+    --text-primary: #fdfbfa;
+    --text-secondary: #b89a9f;
+    --text-muted: #885e66;
+
+    /* Accent Colors */
+    --accent-primary: #c1001f;
+    --accent-secondary: #e52e3b;
+    --accent-hover: #ff475a;
+    --accent-active: #7a0212;
+    --accent-glow: rgba(255, 71, 90, 0.3);
+
+    /* Borders */
+    --border: #9e001c;
+    --border-light: #b89a9f;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(255, 71, 90, 0.05), 0 1px 2px rgba(255, 71, 90, 0.1);
+    --shadow-md: 0 4px 6px rgba(255, 71, 90, 0.1), 0 1px 3px rgba(255, 71, 90, 0.05);
+    --shadow-lg: 0 10px 25px rgba(255, 71, 90, 0.1), 0 5px 10px rgba(255, 71, 90, 0.05);
+
+    /* Status Colors */
+    --success: #00e600;
+    --warning: #e6e600;
+    --danger: #e60000;
+    --info: #00cccc;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #0d0004 0%, #1a0c0e 100%);
+    --gradient-accent: linear-gradient(135deg, #c1001f 0%, #e52e3b 100%);
+}
+
+/* ========================================
+    RED LIGHT THEME
+    ======================================== */
+[data-theme="red-light"] {
+    /* Background Colors */
+    --bg-primary: #fdfbfa;
+    --bg-secondary: #f0dada;
+    --bg-tertiary: #ffd6d6;
+    --bg-hover: #ffc0c0;
+    --bg-active: #ffaaaa;
+
+    /* Text Colors */
+    --text-primary: #0d0004;
+    --text-secondary: #5e0010;
+    --text-muted: #9e001c;
+
+    /* Accent Colors */
+    --accent-primary: #c1001f;
+    --accent-secondary: #9e001c;
+    --accent-hover: #7a0212;
+    --accent-active: #e52e3b;
+    --accent-glow: rgba(193, 0, 31, 0.3);
+
+    /* Borders */
+    --border: #b89a9f;
+    --border-light: #dcafb0;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(193, 0, 31, 0.12), 0 1px 2px rgba(193, 0, 31, 0.24);
+    --shadow-md: 0 4px 6px rgba(193, 0, 31, 0.1), 0 1px 3px rgba(193, 0, 31, 0.08);
+    --shadow-lg: 0 10px 25px rgba(193, 0, 31, 0.1), 0 5px 10px rgba(193, 0, 31, 0.05);
+
+    /* Status Colors */
+    --success: #008000;
+    --warning: #cc9900;
+    --danger: #cc0000;
+    --info: #006666;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #fdfbfa 0%, #f0dada 100%);
+    --gradient-accent: linear-gradient(135deg, #c1001f 0%, #9e001c 100%);
+}
+body {
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Ensure images and other media don't overflow their containers */
+img, video, iframe {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Prevents extra space below images */
+}
+
+/* General responsive utility to prevent elements from breaking layout */
+* {
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+/* Specific adjustments for elements that might cause overflow */
+.page-content,
+.toolbar,
+.setlist-editor,
+.modal-content {
+    /* Ensure these elements always fit within their parent's width */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box; /* Re-affirm box-sizing */
+}
+
+/* Reduce gap for very small screens if needed, further preventing overflow */
+@media (max-width: 480px) {
+    .toolbar, .setlist-editor {
+        flex-wrap: wrap; /* Allow items to wrap to the next line */
+        gap: 0.5rem; /* Smaller gap for tighter spacing */
+    }
+}
+/* ========================================
+    Global Body and Header Styling
+    ======================================== */
+    
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-primary); /* Using bg-primary for main body background */
+    color: var(--text-primary); /* Using text-primary for main text color */
+    margin: 0;
+    font-size: 1rem; /* Keeping this fixed for now, you can add a variable if needed */
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+.app-header {
+    background-color: var(--bg-secondary);
+    padding: 0 0 0.14rem 0;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.29rem 1.2rem 0.11rem 1.27rem;
+    gap: 1.2rem; /* Push logo away from theme selector */
+}
+
+
+.app-logo {
+    display: inline-block;
+    padding: 0.38em 1.22em 0.36em 1.22em;
+    background: var(--bg-seconodary);
+    border: 5px solid var(--bg-tertiary);
+    border-radius: 50px;
+    box-sizing: border-box;
+    box-shadow: 0 0 9px 3px var(--accent-glow), 0 0 2.7px 0 var(--accent-primary);
+    margin: 1rem 0.9rem 0.9rem 0; /* Top | Right | Bottom | Left — ↑ more space */
+    user-select: none;
+    transition: background 0.33s, border 0.33s, box-shadow 0.33s;
+}
+
+.app-logo-text {
+    font-family: "Neonderthaw", cursive;
+    font-weight: 600;
+    font-size: 1.4rem;
+    letter-spacing: 0.14em;
+    color: var(--text-primary) !important;  /* Override for all themes: neon must POP */
+    text-shadow:
+        0 0 13px var(--text-primary),
+        0 0 24px var(--accent-primary),
+        0 0 48px var(--accent-glow),
+        0 0 66px var(--accent-glow),
+        0 0 12px var(--accent-primary);
+    filter: brightness(1.18) contrast(1.22);
+    animation: neon-flicker-sync 2.6s infinite alternate;
+    line-height: 1.11;
+    white-space: nowrap;
+    opacity: 1;
+    transition: color 0.33s, text-shadow 0.33s, filter 0.33s;
+}
+
+.app-logo-text::after {
+    content: "";
+    display: block;
+    width: 96%;
+    height: 3px;
+    margin: 0.07em auto 0 auto;
+    background: var(--accent-primary);
+    filter: blur(8px) brightness(0.84) opacity(0.22);
+    border-radius: 8px;
+    opacity: 0.09;
+    animation: neon-flicker-sync 2.6s infinite alternate;
+    pointer-events: none;
+    transition: opacity 0.33s;
+}
+
+/* Same flicker for logo and underline */
+@keyframes neon-flicker-sync {
+    0% {
+        text-shadow:
+            0 0 7px #fff,
+            0 0 18px var(--accent-primary),
+            0 0 32px var(--accent-glow),
+            0 0 44px var(--accent-glow);
+        opacity: 0.91;
+    }
+    77% {
+        text-shadow:
+            0 0 12px #fff,
+            0 0 34px var(--accent-primary),
+            0 0 46px var(--accent-glow);
+        opacity: 1;
+    }
+    83% { opacity: 0.29; }
+    86% { opacity: 0.09; }
+    89% { opacity: 1; }
+    100% { opacity: 1; }
+}
+
+.theme-toggle-wrapper {
+    min-width: 120px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-left: 1.3rem;
+}
+
+.theme-select {
+    font-size: 0.95rem;
+    padding: 0.3rem 1.2rem;
+    border-radius: var(--border-radius-base);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    opacity: 0.85;
+    margin-right: 0.1rem;
+    max-width: 170px;
+    transition: background var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23CCC" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.7em top 50%, 0 0;
+    background-size: 0.65em auto, 100%;
+}
+
+.theme-select option {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.app-nav {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 2.1rem;
+    padding: 0.29rem 0 0.03rem 0;
+    background: none;
+    box-shadow: none;
+    border: none;
+}
+
+.nav-button {
+    font-size: 1.11rem;
+    padding: 0.6rem 1.19rem 0.6rem 1.19rem;
+    border-radius: var(--border-radius-base);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    transition: background var(--transition-speed), color var(--transition-speed), box-shadow var(--transition-speed);
+    box-shadow: none;
+    margin-bottom: 0;
+    position: relative;
+    cursor: pointer;
+}
+
+.nav-button:hover {
+    background: var(--bg-hover);
+    color: var(--accent-hover);
+    box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.nav-button.active {
+    color: var(--accent-primary);
+    background: var(--bg-active);
+    border-bottom: 2px solid var(--accent-primary);
+    font-weight: bold;
+    box-shadow: 0 0 7px var(--accent-glow), 0 0 0 var(--accent-glow);
+    z-index: 2;
+    font-size: 1rem;
+    transition: box-shadow var(--transition-speed), color var(--transition-speed), background var(--transition-speed), border-color var(--transition-speed);
+}
+
+/* ========================================
+    Media Queries (already structured, just apply new variables)
+    ======================================== */
+@media (max-width: 800px) {
+    .app-header {
+        padding: 0 0 0.5rem 0;
+    }
+    .header-top {
+        flex-direction: row;
+        padding: 0.7rem 0.7rem 0.4rem 0.7rem;
+    }
+    .app-title {
+        font-size: 1.08rem;
+        padding-left: 0.2rem;
+    }
+    .app-nav {
+        gap: 1.1rem;
+        padding: 0.5rem 0 0 0;
+    }
+    .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.75rem 0.5rem 0.5rem 0.5rem;
+    }
+    .app-nav {
+        gap: 1rem;
+    }
+    .app-title {
+        margin: 0.25rem 0;
+        font-size: 1.15rem;
+    }
+    .theme-toggle-wrapper {
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem;
+        justify-content: flex-end;
+    }
+}
+
+/* ========================================
+    Animations and Tab Content
+    ======================================== */
+.neon-pulse {
+    animation: neon-pulse 1.5s infinite alternate;
+}
+
+@keyframes neon-pulse {
+    from {
+        text-shadow: 0 0 10px var(--accent-primary); /* Uses accent primary */
+    }
+    to {
+        text-shadow: 0 0 20px var(--accent-primary), 0 0 30px var(--accent-primary);
+    }
+}
+
+/* This was a duplicate of .nav-button.active further up, keeping the consolidated one */
+/* .nav-button.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+} */
+
+.tab {
+    display: none;
+}
+
+.tab.active {
+    display: block;
+}
+
+.page-content {
+    padding: var(--padding-base); /* Using base padding */
+}
+
+/* ========================================
+    Toolbar and Buttons
+    ======================================== */
+.toolbar {
+    display: flex;
+    gap: var(--padding-base); /* Using base padding for gap */
+    margin-bottom: var(--padding-base); /* Using base padding for margin */
+    align-items: center;
+}
+
+.search-input, .setlist-select {
+    flex-grow: 1;
+    padding: 0.5rem;
+    background-color: var(--bg-tertiary); /* Inputs use tertiary background */
+    color: var(--text-primary);
+    border: 1px solid var(--border); /* Input borders use main border */
+    border-radius: var(--border-radius-base); /* Using base border radius */
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted); /* Placeholder text uses muted text color */
+}
+
+.btn {
+    background-color: var(--accent-primary); /* Buttons use accent primary */
+    color: var(--bg-primary); /* Text on buttons should contrast, using bg-primary for dark themes */
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--border-radius-base); /* Using base border radius */
+    cursor: pointer;
+    transition: background-color var(--transition-speed), color var(--transition-speed), box-shadow var(--transition-speed);
+    box-shadow: var(--shadow-sm); /* Adding a subtle shadow to buttons */
+}
+
+.btn:hover {
+    background-color: var(--accent-hover);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+    background-color: var(--accent-active);
+}
+
+.btn.danger {
+    background-color: var(--danger); /* Danger button uses danger color */
+    color: var(--text-primary); /* Ensure contrast on danger button */
+}
+.btn.danger:hover {
+    background-color: darken(var(--danger), 10%); /* Subtle darken on hover for danger */
+}
+
+
+.hidden-file {
+    display: none;
+}
+
+/* ========================================
+    Song List and Setlist Editor
+    ======================================== */
+.song-list {
+    list-style: none;
+    padding: 0;
+}
+
+.song-item {
+    background-color: var(--bg-tertiary); /* Song items use tertiary background */
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--border-radius-base); /* Using base border radius */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border-light); /* Lighter border for song items */
+    box-shadow: var(--shadow-sm);
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.song-item:hover {
+    background-color: var(--bg-hover);
+}
+
+.setlist-editor {
+    display: flex;
+    gap: var(--padding-base); /* Using base padding for gap */
+}
+
+.column {
+    flex: 1;
+    background-color: var(--bg-secondary); /* Columns use secondary background */
+    padding: var(--padding-base); /* Using base padding */
+    border-radius: var(--border-radius-base); /* Using base border radius */
+    min-height: 300px;
+    border: 1px solid var(--border); /* Column borders use main border */
+    box-shadow: var(--shadow-md); /* Adding shadow to columns */
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.song-container {
+    min-height: 200px;
+}
+
+/* ========================================
+    Performance Mode
+    ======================================== */
+.performance-mode-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary); /* Overlay uses primary background */
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    transition: background-color var(--transition-speed);
+}
+
+.performance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-secondary); /* Performance header uses secondary background */
+    border-bottom: 1px solid var(--border);
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.lyrics-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 1.5rem;
+    padding: 2rem;
+    text-align: center;
+    line-height: 1.6;
+    color: var(--text-primary); /* Lyrics use primary text color */
+    transition: color var(--transition-speed);
+}
+
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.2); /* Consider a thematic background for these */
+    color: var(--text-primary); /* Nav arrows use primary text color */
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 1rem;
+    border-radius: var(--border-radius-base); /* Rounding the arrows */
+    transition: background var(--transition-speed), color var(--transition-speed);
+}
+
+.nav-arrow:hover {
+    background: rgba(0,0,0,0.4);
+}
+
+.nav-arrow.left { left: 0; }
+.nav-arrow.right { right: 0; }
+
+/* ========================================
+    Modal Styling
+    ======================================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6); /* Slightly darker overlay for modals */
+}
+
+.modal-content {
+    background-color: var(--bg-primary); /* Modal content uses primary background */
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid var(--border); /* Modal borders use main border */
+    width: 80%;
+    max-width: 500px;
+    border-radius: var(--border-radius-base); /* Using base border radius */
+    box-shadow: var(--shadow-lg); /* Larger shadow for modals */
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}

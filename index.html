@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>HIll Rd. Setlist Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" href="assets/icons/icon-192x192.png">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
+</head>
+<body>
+
+ <header class="app-header">
+  <div class="header-top">
+    <div class="app-logo">
+      <span class="app-logo-text">Hill Rd. Setlist Manager</span>
+    </div>
+    <div class="theme-toggle-wrapper">
+      <select id="theme-select" class="theme-select" aria-label="Select Theme">
+        <option value="default-dark">Dark</option>
+        <option value="default-light">Light</option>
+        <option value="blue-dark">Blue Dark</option>
+        <option value="blue-light">Blue Light</option>
+        <option value="red-dark">Red Dark</option>
+        <option value="red-light">Red Light</option>
+      </select>
+    </div>
+  </div>
+  <nav class="app-nav" aria-label="Main tabs">
+    <button type="button" class="nav-button active" data-tab="songs" aria-label="Songs tab">
+      <i class="fas fa-book"></i> Songs
+    </button>
+    <button type="button" class="nav-button" data-tab="setlists" aria-label="Setlists tab">
+      <i class="fas fa-list"></i> Setlists
+    </button>
+    <button type="button" class="nav-button" data-tab="performance" aria-label="Performance tab">
+      <i class="fas fa-music"></i> Lyrics
+    </button>
+  </nav>
+</header>
+
+
+
+    <main id="app">
+        <section id="songs" class="tab active">
+            <div class="page-content songs-page">
+                <div class="toolbar">
+                    <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
+                    <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i> Add Song</button>
+                    <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i> Upload</label>
+                    <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
+                </div>
+                <div id="song-list" class="song-list"></div>
+            </div>
+        </section>
+
+        <section id="setlists" class="tab">
+            <div class="page-content setlists-page">
+                <div class="toolbar">
+                    <select id="setlist-select" class="setlist-select"></select>
+                    <button id="new-setlist-btn" class="btn"><i class="fas fa-plus"></i> New Setlist</button>
+                    <button id="rename-setlist-btn" class="btn"><i class="fas fa-pen"></i> Rename</button>
+                    <button id="duplicate-setlist-btn" class="btn"><i class="fas fa-copy"></i> Duplicate</button>
+                    <button id="delete-setlist-btn" class="btn danger"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+                <div class="setlist-editor">
+                    <div class="column">
+                        <h3>Available Songs</h3>
+                        <div id="available-songs" class="song-container"></div>
+                    </div>
+                    <div class="column">
+                        <h3 id="current-setlist-title">Current Setlist</h3>
+                        <div id="current-setlist-songs" class="song-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="performance" class="tab">
+            <div class="page-content performance-page">
+                <div class="toolbar">
+                    <select id="performance-setlist-select" class="setlist-select"></select>
+                    <input type="text" id="performance-song-search" class="search-input" placeholder="Find any song...">
+                    <button id="start-performance-btn" class="btn primary"><i class="fas fa-play"></i> Start</button>
+                </div>
+                <div id="performance-song-list" class="song-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="performance-mode" class="performance-mode-overlay">
+        <div class="performance-header">
+            <div id="performance-song-info" class="song-info"></div>
+            <div class="performance-controls">
+                <label for="font-size-slider">Font Size:</label>
+                <input type="range" id="font-size-slider" min="0.8" max="3" step="0.1" value="1.5">
+                <button id="toggle-theme-btn" class="btn"><i class="fas fa-palette"></i></button>
+                <button id="exit-performance-btn" class="btn danger"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div id="lyrics-display" class="lyrics-container"></div>
+        <button id="prev-song-btn" class="nav-arrow left"><i class="fas fa-chevron-left"></i></button>
+        <button id="next-song-btn" class="nav-arrow right"><i class="fas fa-chevron-right"></i></button>
+    </div>
+
+    <div id="song-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="song-modal-title">Add Song</h2>
+            <input type="text" id="song-title-input" placeholder="Song Title">
+            <textarea id="song-lyrics-input" placeholder="Enter lyrics..."></textarea>
+            <div class="modal-actions">
+                <button id="save-song-btn" class="btn primary">Save</button>
+                <button id="cancel-song-btn" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="setlist-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="setlist-modal-title">New Setlist</h2>
+            <input type="text" id="setlist-name-input" placeholder="Setlist Name">
+            <div class="modal-actions">
+                <button id="save-setlist-btn" class="btn primary">Save</button>
+                <button id="cancel-setlist-btn" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
