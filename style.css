@@ -741,3 +741,277 @@ body {
     box-shadow: var(--shadow-lg); /* Larger shadow for modals */
     transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
 }
+
+/* Modal Style Fixes & Neon Glow */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0; top: 0; width: 100%; height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    margin: 8% auto;
+    padding: 2.2rem 2.2rem 1.2rem 2.2rem;
+    border: 2px solid var(--accent-primary);
+    width: 94vw;
+    max-width: 400px;
+    border-radius: 24px;
+    box-shadow: 0 0 32px 2px var(--accent-glow), 0 4px 40px 8px #000b;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: stretch;
+    animation: neon-modal-pop 0.44s cubic-bezier(0.6,0,0.2,1);
+}
+
+@keyframes neon-modal-pop {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.modal-content h2 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent-primary);
+    text-align: center;
+    font-size: 1.5rem;
+    text-shadow: 0 0 14px var(--accent-primary);
+}
+
+#song-title-input, #song-lyrics-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s;
+}
+
+#song-title-input:focus, #song-lyrics-input:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+#song-lyrics-input {
+    min-height: 6rem;
+    max-height: 28vh;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.modal-actions .btn {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+/* Add these styles to your existing CSS */
+
+/* Toast notifications */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-success {
+    background-color: #10b981;
+}
+
+.toast-error {
+    background-color: #ef4444;
+}
+
+/* Improved setlist editor layout */
+.setlist-editor {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.setlist-editor .column {
+    background: var(--surface-color);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.setlist-editor .column h3 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+/* Enhanced song items in setlist editor */
+.song-container .song-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.song-container .song-item:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.song-container .song-item .song-number {
+    background: var(--accent-color);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.song-container .song-item .song-title {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.song-container .song-item .song-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.song-container .song-item .song-controls .btn {
+    padding: 6px;
+    min-width: auto;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.song-container .song-item .song-controls .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Empty state messages */
+.empty-message {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: 40px 20px;
+    margin: 0;
+}
+
+/* Disabled button states */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Better toolbar spacing */
+.toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.toolbar .setlist-select {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+/* Responsive setlist editor */
+@media (max-width: 768px) {
+    .setlist-editor {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toolbar .setlist-select {
+        min-width: auto;
+        max-width: none;
+    }
+    
+    .song-container .song-item .song-controls {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .song-container .song-item .song-controls .btn {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
