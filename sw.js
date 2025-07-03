@@ -5,6 +5,7 @@ const urlsToCache = [
     '/style.css',
     '/script.js',
     '/manifest.json',
+    '/lyricsManager.js',
     '/assets/icons/icon-192x192.png',
     '/assets/icons/icon-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',

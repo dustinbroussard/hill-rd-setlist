@@ -10,7 +10,7 @@ function normalizeTitle(filename) {
     return name;
 }
 
-const LyricsManager = (() => {
+const lyricsManager = (() => {
     let lyricFiles = new Map();
     let fuseIndex = null;
     const DB_KEY = 'lyricFiles';
@@ -158,5 +158,5 @@ const LyricsManager = (() => {
     };
 })();
 
-window.LyricsManager = LyricsManager;
+window.lyricsManager = lyricsManager;
 

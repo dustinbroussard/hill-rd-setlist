@@ -94,7 +94,35 @@ class App {
         this.#saveSongBtn.addEventListener('click', () => this.#saveSong());
         this.#cancelSongBtn.addEventListener('click', () => this.#closeSongModal());
         this.#songSearchInput.addEventListener('input', () => this.#renderSongs());
-        this.#songUploadInput.addEventListener('change', (e) => this.#handleFileUpload(e));
+	this.#songUploadInput.addEventListener('change', async (e) => {
+	  const files = e.target.files;
+	  for (const file of files) {
+	    if (file.name.endsWith('.docx')) {
+	      const arrayBuffer = await file.arrayBuffer();
+	      const { value: html } = await window.mammoth.convertToHtml({ arrayBuffer });
+	      const title      = file.name.replace('.docx', '');
+	      const lyrics     = html.replace(/<\/?[^>]+(>|$)/g, '');
+	      LyricsManager.addLyricFile({
+		id:        crypto.randomUUID(),
+		title,
+		lyrics,
+		fileType: 'docx'
+	      });
+	    } else {
+	      const lyrics = await file.text();
+	      const title  = file.name.replace('.txt','');
+	      LyricsManager.addLyricFile({
+		id:        crypto.randomUUID(),
+		title,
+		lyrics,
+		fileType: 'txt'
+	      });
+	    }
+	  }
+	  this.#renderSongs();
+	  this.#renderPerformanceTab();
+	});
+
         this.#songList.addEventListener('click', this.#handleSongListClick.bind(this));
 
         if (this.#deleteAllBtn) {
@@ -201,8 +229,8 @@ class App {
     #renderSongs() {
         const query = this.#songSearchInput.value.trim();
         let songs = query
-            ? LyricsManager.searchLyrics(query)
-            : LyricsManager.getAllLyrics();
+            ? lyricsManager.searchLyrics(query)
+            : lyricsManager.getAllLyrics();
 
 songs = songs.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -223,7 +251,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
         this.#currentSongId = id;
         
         if (mode === 'edit' && id) {
-            const song = LyricsManager.getLyricById(id);
+            const song = lyricsManager.getLyricById(id);
             this.#songModalTitle.textContent = 'Edit Song';
             this.#songTitleInput.value = song.title;
             this.#songLyricsInput.value = song.lyrics;
@@ -251,10 +279,10 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
         }
 
         if (this.#modalMode === 'edit' && this.#currentSongId) {
-            LyricsManager.renameLyric(this.#currentSongId, title);
-            LyricsManager.editLyric(this.#currentSongId, lyrics);
+            lyricsManager.renameLyric(this.#currentSongId, title);
+            lyricsManager.editLyric(this.#currentSongId, lyrics);
         } else {
-            LyricsManager.addLyricFile({
+            lyricsManager.addLyricFile({
                 id: crypto.randomUUID(),
                 title,
                 lyrics,
@@ -268,7 +296,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
 
     #deleteSong(id) {
         if (confirm('Are you sure you want to delete this song?')) {
-            LyricsManager.removeLyric(id);
+            lyricsManager.removeLyric(id);
             this.#renderSongs();
             // Remove from setlists
             SetlistsManager.getAllSetlists().forEach(setlist => {
@@ -284,8 +312,8 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
 
     #deleteAllSongs() {
         if (confirm('Delete ALL songs? This cannot be undone!')) {
-            const all = LyricsManager.getAllLyrics();
-            all.forEach(song => LyricsManager.removeLyric(song.id));
+            const all = lyricsManager.getAllLyrics();
+            all.forEach(song => lyricsManager.removeLyric(song.id));
             this.#renderSongs();
             SetlistsManager.clearAllSetlists?.() || this.#clearAllSetlistsManual();
             this.#renderSetlists();
@@ -304,7 +332,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
         if (files.length === 0) return;
 
         try {
-            const results = await LyricsManager.bulkUpload(files);
+            const results = await lyricsManager.bulkUpload(files);
             const successCount = results.filter(r => r.status === 'success').length;
             const errorCount = results.filter(r => r.status === 'error').length;
             
@@ -360,7 +388,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
 
     #renderSetlistSongs() {
         const setlist = SetlistsManager.getSetlistById(this.#currentSetlistId);
-        const allSongs = LyricsManager.getAllLyrics();
+        const allSongs = lyricsManager.getAllLyrics();
 
         if (!setlist) {
             this.#availableSongsContainer.innerHTML = '<p>No setlist selected</p>';
@@ -550,7 +578,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
             }
 
             // Fuzzy match each line to song titles
-            const allSongs = LyricsManager.getAllLyrics();
+            const allSongs = lyricsManager.getAllLyrics();
             const foundIds = [];
             const notFound = [];
 
@@ -600,7 +628,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
             alert('No songs in this setlist!');
             return;
         }
-        const allSongs = LyricsManager.getAllLyrics();
+        const allSongs = lyricsManager.getAllLyrics();
         const lines = setlist.songs.map(id => {
             const song = allSongs.find(s => s.id === id);
             return song ? song.title : '';
@@ -643,11 +671,11 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
         if (this.#performanceSetlistId) {
             const setlist = SetlistsManager.getSetlistById(this.#performanceSetlistId);
             if (setlist) {
-                const allSongs = LyricsManager.getAllLyrics();
+                const allSongs = lyricsManager.getAllLyrics();
                 songs = setlist.songs.map(id => allSongs.find(s => s.id === id)).filter(Boolean);
             }
         } else {
-            songs = LyricsManager.getAllLyrics();
+            songs = lyricsManager.getAllLyrics();
         }
 
         if (query) {
@@ -684,7 +712,7 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
                 alert('No songs in selected setlist');
             }
         } else {
-            const allSongs = LyricsManager.getAllLyrics();
+            const allSongs = lyricsManager.getAllLyrics();
             if (allSongs.length > 0) {
                 this.#startPerformanceWithSong(allSongs[0].id);
             } else {
@@ -697,10 +725,10 @@ songs = songs.sort((a, b) => a.title.localeCompare(b.title));
         // Set up the performance song list
         if (this.#performanceSetlistId) {
             const setlist = SetlistsManager.getSetlistById(this.#performanceSetlistId);
-            const allSongs = LyricsManager.getAllLyrics();
+            const allSongs = lyricsManager.getAllLyrics();
             this.#performanceSongs = setlist.songs.map(id => allSongs.find(s => s.id === id)).filter(Boolean);
         } else {
-            this.#performanceSongs = LyricsManager.getAllLyrics();
+            this.#performanceSongs = lyricsManager.getAllLyrics();
         }
 
         // Find the starting song index
