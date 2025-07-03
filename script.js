@@ -54,7 +54,8 @@ class App {
     #currentPerformanceSongIndex = 0;
     #isPerformanceMode = false;
     #modalMode = null; // 'add', 'edit', 'rename'
-
+    #sortableSetlist = null;
+    
     constructor() {
         this.#loadTheme();
         this.#injectDeleteAllButton();
@@ -111,6 +112,18 @@ class App {
 
         this.#availableSongsContainer.addEventListener('click', this.#handleAvailableSongsClick.bind(this));
         this.#currentSetlistSongsContainer.addEventListener('click', this.#handleCurrentSetlistSongsClick.bind(this));
+	// Setlist Import/Export
+	document.getElementById('import-setlist-btn').addEventListener('click', () => {
+	    document.getElementById('import-setlist-file').click();
+	});
+
+	document.getElementById('import-setlist-file').addEventListener('change', (e) => {
+	    this.#handleImportSetlistFile(e);
+	});
+
+	document.getElementById('export-setlist-btn').addEventListener('click', () => {
+	    this.#handleExportSetlist();
+	});
 
         // Performance Mode
         this.#performanceSetlistSelect.addEventListener('change', this.#handlePerformanceSetlistChange.bind(this));
@@ -187,9 +200,12 @@ class App {
     // --- Song Management Functions ---
     #renderSongs() {
         const query = this.#songSearchInput.value.trim();
-        const songs = query
+        let songs = query
             ? LyricsManager.searchLyrics(query)
             : LyricsManager.getAllLyrics();
+
+songs = songs.sort((a, b) => a.title.localeCompare(b.title));
+
 
         this.#songList.innerHTML = songs.map(song => `
             <div class="song-item" data-id="${song.id}">
@@ -352,8 +368,10 @@ class App {
             return;
         }
 
-        // Available songs (not in current setlist)
-        const availableSongs = allSongs.filter(s => !setlist.songs.includes(s.id));
+        // Available songs (not in current setlist), ALPHABETIZED
+        const availableSongs = allSongs
+             .filter(s => !setlist.songs.includes(s.id))
+             .sort((a, b) => a.title.localeCompare(b.title));
         this.#availableSongsContainer.innerHTML = availableSongs.length > 0 
             ? availableSongs.map(s =>
                 `<div class="song-item" data-id="${s.id}">
@@ -364,12 +382,12 @@ class App {
             : '<p>All songs are in this setlist</p>';
 
         // Current setlist songs (in order)
-        this.#currentSetlistTitle.textContent = setlist.name;
-        const setlistSongs = setlist.songs.map(songId => allSongs.find(s => s.id === songId)).filter(Boolean);
+        const setlistSongs = setlist.songs.map(id => allSongs.find(s => s.id === id)).filter(Boolean);
         this.#currentSetlistSongsContainer.innerHTML = setlistSongs.length > 0
             ? setlistSongs.map(s =>
-                `<div class="song-item" data-id="${s.id}">
-                    <span>${s.title}</span>
+                `<div class="song-item sortable-setlist-song" data-id="${s.id}">
+                    <span class="drag-handle" title="Drag to reorder" style="cursor:grab;"><i class="fas fa-grip-vertical"></i></span>
+                    <span class="song-title">${s.title}</span>
                     <div>
                         <button class="btn move-up-btn" title="Move Up"><i class="fas fa-arrow-up"></i></button>
                         <button class="btn move-down-btn" title="Move Down"><i class="fas fa-arrow-down"></i></button>
@@ -378,6 +396,27 @@ class App {
                 </div>`
             ).join('')
             : '<p>No songs in this setlist</p>';
+            
+        // Drag-and-drop reordering for setlist songs
+        if (this.#sortableSetlist) {
+            this.#sortableSetlist.destroy();
+        }
+        this.#sortableSetlist = Sortable.create(this.#currentSetlistSongsContainer, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'drag-ghost',
+            onEnd: (evt) => {
+                // Update the order in the setlist
+                const newOrder = Array.from(this.#currentSetlistSongsContainer.querySelectorAll('.song-item'))
+                    .map(item => item.dataset.id);
+                const setlist = SetlistsManager.getSetlistById(this.#currentSetlistId);
+                if (setlist) {
+                    setlist.songs = newOrder;
+                    SetlistsManager.updateSetlistSongs(this.#currentSetlistId, setlist.songs);
+                    this.#renderSetlistSongs(); // Refresh for visual accuracy
+                }
+            }
+        });
     }
 
     #handleAvailableSongsClick(e) {
@@ -484,7 +523,103 @@ class App {
         this.#currentSetlistId = e.target.value || null;
         this.#renderSetlistSongs();
     }
+    
+    async #handleImportSetlistFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
+        let lines = [];
+        let name = file.name.replace(/\.[^/.]+$/, '');
+
+        try {
+            if (file.name.endsWith('.txt')) {
+                const text = await file.text();
+                lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            } else if (file.name.endsWith('.docx')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await window.mammoth.convertToHtml({ arrayBuffer });
+                const text = result.value.replace(/<\/?[^>]+(>|$)/g, "");
+                lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            } else {
+                alert('Unsupported file type. Please use .txt or .docx');
+                return;
+            }
+            if (lines.length === 0) {
+                alert('No titles found in file.');
+                return;
+            }
+
+            // Fuzzy match each line to song titles
+            const allSongs = LyricsManager.getAllLyrics();
+            const foundIds = [];
+            const notFound = [];
+
+            // Use Fuse.js for fuzzy title matching
+            const fuse = new Fuse(allSongs, {
+                keys: ['title'],
+                threshold: 0.4, // Lower = stricter, higher = looser
+            });
+
+            lines.forEach(line => {
+                const results = fuse.search(line);
+                if (results.length > 0) {
+                    foundIds.push(results[0].item.id); // Best match
+                } else {
+                    notFound.push(line);
+                }
+            });
+
+            if (foundIds.length === 0) {
+                alert('No matching song titles found in library.');
+                return;
+            }
+
+            const setlist = SetlistsManager.addSetlist(name, foundIds);
+            this.#currentSetlistId = setlist.id;
+            this.#renderSetlists();
+
+            if (notFound.length > 0) {
+                alert(`Setlist imported as "${setlist.name}". Some songs not found:\n${notFound.join('\n')}`);
+            } else {
+                alert(`Setlist "${setlist.name}" imported successfully!`);
+            }
+        } catch (err) {
+            alert('Failed to import setlist: ' + err.message);
+        } finally {
+            event.target.value = '';
+        }
+    }
+
+    #handleExportSetlist() {
+        if (!this.#currentSetlistId) {
+            alert('Select a setlist to export!');
+            return;
+        }
+        const setlist = SetlistsManager.getSetlistById(this.#currentSetlistId);
+        if (!setlist || !setlist.songs.length) {
+            alert('No songs in this setlist!');
+            return;
+        }
+        const allSongs = LyricsManager.getAllLyrics();
+        const lines = setlist.songs.map(id => {
+            const song = allSongs.find(s => s.id === id);
+            return song ? song.title : '';
+        }).filter(Boolean);
+
+        const txt = lines.join('\n');
+        const blob = new Blob([txt], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${setlist.name}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }, 100);
+    }
+
+    
     // --- Performance Mode Functions ---
     #renderPerformanceTab() {
         this.#renderSetlists(); // This also updates the performance setlist select
@@ -609,6 +744,8 @@ class App {
             .join('<br><br>');
 
         this.#lyricsDisplay.innerHTML = formattedLyrics || '<p>No lyrics available</p>';
+        
+        this.#autoFitLyricsFont();
 
         // Update navigation buttons
         this.#prevSongBtn.style.display = this.#currentPerformanceSongIndex > 0 ? 'block' : 'none';
@@ -637,6 +774,23 @@ class App {
             document.body.dataset.theme = currentTheme.replace('dark', 'light');
         } else {
             document.body.dataset.theme = currentTheme.replace('light', 'dark');
+        }
+    }
+
+    #autoFitLyricsFont() {
+        const container = this.#lyricsDisplay;
+        if (!container) return;
+
+        // Start big, shrink down until it fits
+        let fontSize = 2.0; // rem
+        container.style.fontSize = fontSize + 'rem';
+
+        // Allow a little padding for header/footer
+        const maxHeight = this.#performanceMode.offsetHeight - 60;
+
+        while (container.scrollHeight > maxHeight && fontSize > 0.6) {
+            fontSize -= 0.04;
+            container.style.fontSize = fontSize + 'rem';
         }
     }
 }
