@@ -1190,3 +1190,18 @@ body {
         flex: 1 1 45%;
     }
 }
+
+#song-modal,
+#setlist-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.8) !important;
+}
+
