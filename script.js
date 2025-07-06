@@ -2,11 +2,11 @@
 function normalizeSetlistName(name) {
     return name.replace(/\.[^/.]+$/, '')  // Remove file extension
         .replace(/[_\-]+/g, ' ')
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[^\\w\\s]/g, '')
+        .replace(/\\s+/g, ' ')
         .trim()
         .toLowerCase()
-        .replace(/\b\w/g, c => c.toUpperCase());
+        .replace(/\\b\\w/g, c => c.toUpperCase());
 }
 
 const SetlistsManager = (() => {
@@ -52,7 +52,7 @@ const SetlistsManager = (() => {
             finalName = `${normalized} (${counter})`;
         }
         const setlist = {
-            id: crypto.randomUUID(),
+            id: (Date.now().toString() + Math.random().toString(16).slice(2)), 
             name: finalName,
             songs: [...songIds],
             createdAt: Date.now(),
@@ -143,23 +143,31 @@ const SetlistsManager = (() => {
     }
 
     // Used for text import (one song per line)
-    function importSetlistFromText(name, text, allSongs) {
-        const titles = text.split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0);
-        const songIds = [];
-        const notFound = [];
-        for (const title of titles) {
-            const normalizedTitle = normalizeSetlistName(title);
-            const found = allSongs.find(s => 
-                s.title.toLowerCase() === normalizedTitle.toLowerCase()
-            );
-            if (found) songIds.push(found.id);
-            else notFound.push(title);
-        }
-        const setlist = addSetlist(name, songIds);
-        return { setlist, imported: songIds.length, notFound };
-    }
+	function importSetlistFromText(name, text, allSongs) {
+	    const titles = text.split('\n')
+		.map(line => line.trim())
+		.filter(line => line.length > 0);
+	    const songIds = [];
+	    const notFound = [];
+	    // Set up Fuse.js with fuzzy config
+	    const fuse = new Fuse(allSongs, {
+		keys: ['title'],
+		threshold: 0.4, // Lower is stricter, higher is looser. 0.3-0.4 is usually good.
+		includeScore: true,
+	    });
+	    for (const title of titles) {
+		const results = fuse.search(title);
+		if (results.length && results[0].score <= 0.5) {
+		    // Good enough match, take it
+		    const found = results[0].item;
+		    songIds.push(found.id);
+		} else {
+		    notFound.push(title);
+		}
+	    }
+	    const setlist = addSetlist(name, songIds);
+	    return { setlist, imported: songIds.length, notFound };
+	}
 
     // Export setlist to json, txt, or csv
     function exportSetlist(setlistId, allSongs, format = 'json') {
@@ -172,12 +180,12 @@ const SetlistsManager = (() => {
             case 'json':
                 return JSON.stringify({ setlist, songs }, null, 2);
             case 'txt':
-                return songs.map(song => song.title).join('\n');
+                return songs.map(song => song.title).join('\\n');
             case 'csv':
-                const header = 'Title,Lyrics\n';
+                const header = 'Title,Lyrics\\n';
                 const rows = songs.map(song => 
                     `"${song.title.replace(/"/g, '""')}","${song.lyrics.replace(/"/g, '""')}"`
-                ).join('\n');
+                ).join('\\n');
                 return header + rows;
             default:
                 return null;
@@ -205,26 +213,46 @@ const SetlistsManager = (() => {
     };
 })();
 
-function normalizeTitle(filename) {
-    let title = filename.replace(/\.[^/.]+$/, ''); // Remove extension
-    title = title.replace(/[_\-]+/g, ' ');        // Underscore/dash to space
-    title = title.replace(/\s+/g, ' ').trim();    // Remove double spaces/trim
-    title = title.replace(/([a-z])([A-Z])/g, '$1 $2'); // Split camel
-    // Title Case
-    title = title.replace(/\w\S*/g, (w) =>
-        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-    );
-    return title;
-}
+// Removed the global normalizeTitle function to avoid confusion and redundancy.
+// function normalizeTitle(filename) {
+//     let title = filename.replace(/\\.[^/.]+$/, ''); // Remove extension
+//     title = title.replace(/[_\\-]+/g, ' ');        // Underscore/dash to space
+//     title = title.replace(/\\s+/g, ' ').trim();    // Remove double spaces/trim
+//     title = title.replace(/([a-z])([A-Z])/g, '$1 $2'); // Split camel
+//     // Title Case
+//     title = title.replace(/\\w\\S*/g, (w) =>
+//         w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+//     );
+//     return title;
+// }
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = {
+    	normalizeTitle(title) {
+	    // Remove extension, spaces, make Title Case
+	    let t = title.replace(/\.[^/.]+$/, '');
+	    t = t.replace(/[_\-]+/g, ' ');
+	    t = t.replace(/\s+/g, ' ').trim();
+	    t = t.replace(/([a-z])([A-Z])/g, '$1 $2');
+	    // Title Case
+	    t = t.replace(/\w\S*/g, (w) =>
+		w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+	    );
+	    return t;
+	},
+
+	isDuplicateTitle(title) {
+	    const normalized = title.trim().toLowerCase();
+	    return this.songs.some(song => song.title.trim().toLowerCase() === normalized);
+	},
+
         // DOM Elements
         themeSelect: document.getElementById('theme-select'),
         navButtons: document.querySelectorAll('.nav-button'),
         tabs: document.querySelectorAll('.tab'),
         songList: document.getElementById('song-list'),
         addSongBtn: document.getElementById('add-song-btn'),
+        deleteAllSongsBtn: document.getElementById('delete-all-songs-btn'),
         songModal: document.getElementById('song-modal'),
         songModalTitle: document.getElementById('song-modal-title'),
         saveSongBtn: document.getElementById('save-song-btn'),
@@ -274,6 +302,9 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMode: null,
         sortableSetlist: null,
         lastPerformance: null,
+	autoScrollTimer: null,
+	autoScrollSpeed: Number(localStorage.getItem('autoscrollSpeed')) || 1, // <-- loads saved value or defaults to 1
+	autoScrollActive: false,
 
         // --- Core App Initialization ---
         init() {
@@ -284,12 +315,12 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // --- Data Management ---
-        loadData() {
-            this.songs = JSON.parse(localStorage.getItem('songs')) || [];
-            const theme = localStorage.getItem('theme') || 'default-dark';
-            document.body.dataset.theme = theme;
-            this.themeSelect.value = theme;
-        },
+	loadData() {
+	    this.songs = JSON.parse(localStorage.getItem('songs')) || [];
+	    const theme = localStorage.getItem('theme') || 'default-dark';
+	    document.body.dataset.theme = theme;
+	},
+
 
         saveData() {
             localStorage.setItem('songs', JSON.stringify(this.songs));
@@ -303,6 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
         getLyricById(id) {
             return this.songs.find(song => song.id === id);
         },
+
+        // Removed the duplicate isDuplicateTitle definition from here.
+        // isDuplicateTitle(title) {
+        //     const normalized = title.trim().toLowerCase();
+        //     return this.songs.some(song => song.title.trim().toLowerCase() === normalized);
+        // },
 
         addLyric(song) {
             this.songs.push(song);
@@ -340,26 +377,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Event Listeners ---
         setupEventListeners() {
-            this.themeSelect.addEventListener('change', (e) => {
-                document.body.dataset.theme = e.target.value;
-                localStorage.setItem('theme', e.target.value);
-            });
-
-            this.navButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const tabId = button.dataset.tab;
-                    this.tabs.forEach(tab => tab.classList.remove('active'));
-                    document.getElementById(tabId).classList.add('active');
-                    this.navButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                });
-            });
-
             this.addSongBtn.addEventListener('click', () => this.openSongModal());
             this.saveSongBtn.addEventListener('click', () => this.saveSong());
             this.cancelSongBtn.addEventListener('click', () => this.closeSongModal());
             this.songSearchInput.addEventListener('input', () => this.renderSongs());
             this.songUploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
+	    this.deleteAllSongsBtn.addEventListener('click', () => {
+        if (confirm('Delete ALL songs? This cannot be undone!')) {
+            this.songs = [];
+            this.saveData();
+            this.renderSongs();
+         }
+    });
+
+	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
+	    this.navButtons.forEach(btn => {
+	        btn.addEventListener('click', () => {
+		    // Remove 'active' class from all tabs and nav buttons
+		    this.tabs.forEach(tab => tab.classList.remove('active'));
+		    this.navButtons.forEach(b => b.classList.remove('active'));
+		    // Add 'active' class to the clicked nav button and related tab
+		    btn.classList.add('active');
+		    const tabName = btn.getAttribute('data-tab');
+		    document.getElementById(tabName).classList.add('active');
+		    // If you want, trigger a re-render here for each tab
+		    if (tabName === 'songs') this.renderSongs();
+		    if (tabName === 'setlists') this.renderSetlists();
+		    if (tabName === 'performance') this.renderPerformanceTab();
+	        });
+	    });
+
 
             // Setlist Management
             this.newSetlistBtn.addEventListener('click', () => this.openSetlistModal());
@@ -380,7 +427,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.performanceSongList.addEventListener('click', (e) => this.handlePerformanceSongClick(e));
 
             // Performance Controls
-            this.fontSizeSlider.addEventListener('input', (e) => this.handleFontSizeChange(e));
+	    this.fontSizeSlider.addEventListener('input', (e) => {
+	    // Save font size per song if in performance mode
+	        if (this.isPerformanceMode && this.performanceSongs && this.performanceSongs[this.currentPerformanceSongIndex]) {
+		    const songId = this.performanceSongs[this.currentPerformanceSongIndex].id;	
+		    localStorage.setItem('fontSize_' + songId, e.target.value);
+	        }
+	        this.handleFontSizeChange(e);
+	        this.autoFitLyricsFont();
+	    });
+
             this.toggleThemeBtn.addEventListener('click', () => this.handlePerformanceThemeToggle());
             this.exitPerformanceBtn.addEventListener('click', () => this.exitPerformanceMode());
             this.prevSongBtn.addEventListener('click', () => this.navigatePerformanceSong(-1));
@@ -437,23 +493,30 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         saveSong() {
-            const title = normalizeTitle(this.songTitleInput.value.trim());
-            const lyrics = this.songLyricsInput.value.trim();
-            if (!title) return;
+	    const title = this.normalizeTitle(this.songTitleInput.value.trim());
+	    const lyrics = this.songLyricsInput.value.trim();
+	    if (!title) return;
 
-            if (this.currentSongId) {
-                this.renameLyric(this.currentSongId, title);
-                this.editLyric(this.currentSongId, lyrics);
-            } else {
-                this.addLyric({
-                    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-                    title,
-                    lyrics,
-                });
-            }
-            this.renderSongs();
-            this.closeSongModal();
-        },
+	    if (this.currentSongId) {
+		const song = this.songs.find(s => s.id === this.currentSongId);
+		song.title = title;
+		song.lyrics = lyrics;
+	    } else {
+		if (this.isDuplicateTitle(title)) {
+		    this.closeSongModal(); // Silently ignore
+		    return;
+		}
+		this.songs.push({
+		    id: Date.now().toString(),
+		    title,
+		    lyrics,
+		});
+	    }
+	    this.saveData();
+	    this.renderSongs();
+	    this.closeSongModal();
+	},
+
 
         deleteSong(id) {
             if (confirm('Are you sure you want to delete this song?')) {
@@ -468,31 +531,61 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         handleFileUpload(event) {
-            const files = event.target.files;
-            for (const file of files) {
-                const reader = new FileReader();
-                if (file.name.endsWith('.docx')) {
-                    reader.onload = (e) => {
-                        mammoth.extractRawText({ arrayBuffer: e.target.result })
-                            .then(result => {
-                                const title = normalizeTitle(file.name);
-                                const lyrics = result.value;
-                                this.addLyric({ id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), title, lyrics });
-                                this.renderSongs();
-                            });
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    reader.onload = (e) => {
-                        const title = normalizeTitle(file.name);
-                        const lyrics = e.target.result;
-                        this.addLyric({ id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), title, lyrics });
+    const files = event.target.files;
+    for (const file of files) {
+        const reader = new FileReader();
+        if (file.name.endsWith('.docx')) {
+            reader.onload = (e) => {
+                mammoth.extractRawText({ arrayBuffer: e.target.result })
+                    .then(result => {
+                        const title = this.normalizeTitle(file.name);
+                        if (this.isDuplicateTitle(title)) return;
+                        const lyrics = result.value;
+                        this.songs.push({ id: Date.now().toString(), title, lyrics });
+                        this.saveData();
                         this.renderSongs();
-                    };
-                    reader.readAsText(file);
-                }
-            }
-        },
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.onload = (e) => {
+                const title = this.normalizeTitle(file.name);
+                if (this.isDuplicateTitle(title)) return;
+                const lyrics = e.target.result;
+                this.songs.push({ id: Date.now().toString(), title, lyrics });
+                this.saveData();
+                this.renderSongs();
+            };
+            reader.readAsText(file);
+        }
+    }
+},
+
+updateTabToolbar(tab) {
+    const toolbar = document.querySelector('.tab-toolbar');
+    if (!toolbar) return;
+    if (tab === 'songs') {
+        toolbar.innerHTML = `
+            <input class="search-input" type="text" placeholder="Search songs...">
+            <button class="btn" id="add-song-btn">+ Add Song</button>
+            <button class="btn danger" id="delete-all-btn">Delete All</button>
+            <button class="btn" id="upload-btn">Upload</button>
+        `;
+        // Add event listeners if needed (see below)
+    } else if (tab === 'setlists') {
+        toolbar.innerHTML = `
+            <select class="setlist-select"></select>
+            <button class="btn" id="add-setlist-btn">+ Add Setlist</button>
+            <button class="btn" id="delete-setlist-btn">Delete Setlist</button>
+            <!-- ...etc... -->
+        `;
+    } else if (tab === 'lyrics') {
+        toolbar.innerHTML = '';
+        // Or add specific lyrics tools if you want
+    }
+    // You may need to (re)attach event listeners to the new buttons here
+},
+
 
         // === SETLIST MANAGEMENT (WIRED TO SetlistsManager) ===
         renderSetlists() {
@@ -528,45 +621,64 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        renderSetlistSongs() {
-            const setlist = SetlistsManager.getSetlistById(this.currentSetlistId);
-            const allSongs = this.songs;
+	renderSetlistSongs() {
+	    const setlist = SetlistsManager.getSetlistById(this.currentSetlistId);
+	    const allSongs = this.songs;
 
-            if (!setlist) {
-                this.availableSongsContainer.innerHTML = '<p>No setlist selected</p>';
-                this.currentSetlistSongsContainer.innerHTML = '<p>No setlist selected</p>';
-                return;
-            }
+	    if (!setlist) {
+		this.availableSongsContainer.innerHTML = '<p>No setlist selected</p>';
+		this.currentSetlistSongsContainer.innerHTML = '<p>No setlist selected</p>';
+		return;
+	    }
 
-            // Available songs (not in current setlist), ALPHABETIZED
-            const availableSongs = allSongs
-                .filter(s => !setlist.songs.includes(s.id))
-                .sort((a, b) => a.title.localeCompare(b.title));
-            this.availableSongsContainer.innerHTML = availableSongs.length > 0 
-                ? availableSongs.map(s =>
-                    `<div class="song-item" data-id="${s.id}">
-                        <span>${s.title}</span>
-                        <button class="btn add-to-setlist-btn" title="Add to Setlist"><i class="fas fa-arrow-right"></i></button>
-                    </div>`
-                ).join('')
-                : '<p>All songs are in this setlist</p>';
+	    // Available songs
+	    const availableSongs = allSongs
+		.filter(s => !setlist.songs.includes(s.id))
+		.sort((a, b) => a.title.localeCompare(b.title));
+	    this.availableSongsContainer.innerHTML = availableSongs.length > 0 
+		? availableSongs.map(s =>
+		    `<div class="song-item" data-id="${s.id}">
+		        <span>${s.title}</span>
+		        <button class="btn add-to-setlist-btn" title="Add to Setlist"><i class="fas fa-arrow-right"></i></button>
+		    </div>`
+		).join('')
+		: '<p>All songs are in this setlist</p>';
 
-            // Current setlist songs (in order)
-            const setlistSongs = setlist.songs.map(id => allSongs.find(s => s.id === id)).filter(Boolean);
-            this.currentSetlistSongsContainer.innerHTML = setlistSongs.length > 0
-                ? setlistSongs.map(s =>
-                    `<div class="song-item sortable-setlist-song" data-id="${s.id}">
-                        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;"><i class="fas fa-grip-vertical"></i></span>
-                        <span class="song-title">${s.title}</span>
-                        <div>
-                            <button class="btn move-up-btn" title="Move Up"><i class="fas fa-arrow-up"></i></button>
-                            <button class="btn move-down-btn" title="Move Down"><i class="fas fa-arrow-down"></i></button>
-                            <button class="btn remove-from-setlist-btn" title="Remove from Setlist"><i class="fas fa-times"></i></button>
-                        </div>
-                    </div>`
-                ).join('')
-                : '<p>No songs in this setlist</p>';
-        },
+	    // Current setlist songs (in order)
+	    const setlistSongs = setlist.songs.map(id => allSongs.find(s => s.id === id)).filter(Boolean);
+	    this.currentSetlistSongsContainer.innerHTML = setlistSongs.length > 0
+		? setlistSongs.map(s =>
+		    `<div class="song-item sortable-setlist-song" data-id="${s.id}">
+		        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;"><i class="fas fa-grip-vertical"></i></span>
+		        <span class="song-title">${s.title}</span>
+		        <div>
+		            <button class="btn move-up-btn" title="Move Up"><i class="fas fa-arrow-up"></i></button>
+		            <button class="btn move-down-btn" title="Move Down"><i class="fas fa-arrow-down"></i></button>
+		            <button class="btn remove-from-setlist-btn" title="Remove from Setlist"><i class="fas fa-times"></i></button>
+		        </div>
+		    </div>`
+		).join('')
+		: '<p>No songs in this setlist</p>';
+
+	    // <<<<<< THIS CODE BLOCK IS INSIDE THE FUNCTION >>>>>>
+	    // Enable touch-friendly drag-and-drop sorting for setlist songs
+	    if (this.sortableSetlist) {
+		this.sortableSetlist.destroy();
+	    }
+	    this.sortableSetlist = Sortable.create(this.currentSetlistSongsContainer, {
+		animation: 150,
+		handle: '.drag-handle',
+		ghostClass: 'drag-ghost',
+		delay: 0, // no long-press delay for touch
+		touchStartThreshold: 2,
+		onEnd: (evt) => {
+		    // Update the song order in the setlist based on new DOM order
+		    const newOrder = Array.from(this.currentSetlistSongsContainer.querySelectorAll('.song-item')).map(item => item.dataset.id);
+		    SetlistsManager.updateSetlistSongs(this.currentSetlistId, newOrder);
+		    this.renderSetlistSongs();
+		}
+	    });
+	},
 
         openSetlistModal(mode = 'add') {
             this.modalMode = mode;
@@ -757,6 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	    this.isPerformanceMode = false;
 	    this.performanceMode.style.display = 'none';
 	    document.body.style.overflow = '';
+	    document.getElementById('autoscroll-delay-modal').style.display = 'none';
 	    // Save state for resume
 	    const perf = {
 		setlistId: this.performanceSetlistId || null,
@@ -768,30 +881,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         displayCurrentPerformanceSong() {
-            const song = this.performanceSongs[this.currentPerformanceSongIndex];
-            if (!song) return;
-
-            this.performanceSongInfo.innerHTML = `
-                <h2>${song.title}</h2>
-                <p>Song ${this.currentPerformanceSongIndex + 1} of ${this.performanceSongs.length}</p>
-            `;
-
-            // Format lyrics with better line breaks
-            const formattedLyrics = song.lyrics
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0)
-                .join('<br><br>');
-
-            this.lyricsDisplay.innerHTML = formattedLyrics || '<p>No lyrics available</p>';
+	    const song = this.performanceSongs[this.currentPerformanceSongIndex];
+	    if (!song) return;
+	    // Restore saved font size for this song if present
+	    const savedSize = localStorage.getItem('fontSize_' + song.id);
+	    if (savedSize) {
+	        this.fontSizeSlider.value = savedSize;
+	    }
 
             this.autoFitLyricsFont();
 
-            // Update navigation buttons
-            this.prevSongBtn.style.display = this.currentPerformanceSongIndex > 0 ? 'block' : 'none';
-            this.nextSongBtn.style.display = this.currentPerformanceSongIndex < this.performanceSongs.length - 1 ? 'block' : 'none';
-        },
+	    // Split lyrics into lines
+	let lines = song.lyrics.split('\n').map(line => line.trim());
 
+	// Remove duplicate title in the first two *non-blank* lines (case-insensitive)
+	const normTitle = song.title.trim().toLowerCase();
+	let removed = 0;
+	const fuse = new Fuse([normTitle], { threshold: 0.2 });
+	while (
+	  lines.length &&
+	  removed < 2
+	) {
+	  if (lines[0] === '' || lines[0] === null || lines[0] === undefined) {
+	    // Blank line, remove and do not count
+	    lines.shift();
+	  } else if (lines[0].toLowerCase() === normTitle) {
+	    // Exact match to title, remove and count as one removal
+	    lines.shift();
+	    removed++;
+	  } else {
+	    // Not blank and not title—stop checking
+	    break;
+	  }
+	}
+
+	    // Set header title and progress
+	    const songNumber = this.currentPerformanceSongIndex + 1;
+	    const totalSongs = this.performanceSongs.length;
+	    this.performanceSongInfo.innerHTML = `
+	      <h2>${song.title}</h2>
+	      <div class="song-progress">${songNumber} / ${totalSongs}</div>
+	    `;
+	    
+
+	    // Put the lyrics in the display, preserving lines and stanza breaks
+	    this.lyricsDisplay.textContent = lines.join('\n');
+
+	    // Run autofit after a tiny delay
+	    setTimeout(() => this.autoFitLyricsFont(), 30);
+
+	    // Update navigation buttons
+	    this.prevSongBtn.style.display = this.currentPerformanceSongIndex > 0 ? 'block' : 'none';
+	    this.nextSongBtn.style.display = this.currentPerformanceSongIndex < this.performanceSongs.length - 1 ? 'block' : 'none';
+	    this.stopAutoScroll();
+	    this.updateAutoScrollButton();
+	    const btn = document.getElementById('auto-scroll-btn');
+	    if (btn) btn.blur();
+	},
+		
         navigatePerformanceSong(direction) {
             const newIndex = this.currentPerformanceSongIndex + direction;
             if (newIndex >= 0 && newIndex < this.performanceSongs.length) {
@@ -801,9 +948,11 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         handleFontSizeChange(e) {
-            const fontSize = e.target.value;
-            this.lyricsDisplay.style.fontSize = fontSize + 'rem';
-        },
+	  const fontSize = e.target.value;
+	  this.lyricsDisplay.style.fontSize = fontSize + 'rem';
+	  this.autoFitLyricsFont();
+	},
+
 
         handlePerformanceThemeToggle() {
             const currentTheme = document.body.dataset.theme;
@@ -815,20 +964,140 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        autoFitLyricsFont() {
-            const container = this.lyricsDisplay;
-            if (!container) return;
-            let fontSize = 2.0; // rem
-            container.style.fontSize = fontSize + 'rem';
-            const maxHeight = this.performanceMode.offsetHeight - 60;
-            while (container.scrollHeight > maxHeight && fontSize > 0.6) {
-                fontSize -= 0.04;
-                container.style.fontSize = fontSize + 'rem';
-            }
-        }
+	autoFitLyricsFont() {
+	    const container = this.lyricsDisplay;
+	    const overlay = this.performanceMode;
+	    if (!container || !overlay || overlay.style.display !== 'flex') return;
+
+	    setTimeout(() => {
+		let slider = this.fontSizeSlider;
+		let minRem = slider ? parseFloat(slider.value) : 1.5;
+		if (isNaN(minRem) || minRem < 0.8) minRem = 1.5;
+
+		// Compute available height
+		const header = overlay.querySelector('.performance-header');
+		const headerHeight = header ? header.offsetHeight : 0;
+		const cs = getComputedStyle(container);
+		const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+		const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+		const fudge = 16;
+		const maxHeight = overlay.offsetHeight - headerHeight - paddingY - borderY - fudge;
+
+		// Start at slider's value and grow until just before overflow
+		let fontRem = minRem;
+		container.style.transition = "none";
+		container.style.fontSize = `${fontRem}rem`;
+
+		while (container.scrollHeight <= maxHeight && fontRem < 8.0) {
+		    fontRem += 0.04; // small increments for precision
+		    container.style.fontSize = `${fontRem}rem`;
+		}
+		// Step back if we overshot
+		if (container.scrollHeight > maxHeight) {
+		    fontRem -= 0.04;
+		    container.style.fontSize = `${fontRem}rem`;
+		}
+
+		// Never shrink below slider’s value!
+		if (fontRem < minRem) {
+		    fontRem = minRem;
+		    container.style.fontSize = `${fontRem}rem`;
+		}
+
+		// Don't update slider—user controls that
+		container.style.transition = "font-size 0.18s cubic-bezier(.8,0,.2,1)";
+		setTimeout(() => container.style.transition = "", 220);
+		container.scrollTop = 0;
+	    }, 30);
+	},
+
+	startAutoScroll() {
+	    this.stopAutoScroll();
+	    const container = this.lyricsDisplay;
+	    if (!container) return;
+	    if (container.scrollHeight <= container.clientHeight) return; // No overflow, no scroll needed
+
+	    this.autoScrollActive = true;
+
+	    // Wait user-selected seconds before starting to scroll
+	    this.autoScrollDelayTimer = setTimeout(() => {
+		this.autoScrollTimer = setInterval(() => {
+		    if (!this.autoScrollActive) return;
+		    // If at bottom, stop scrolling
+		    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 2) {
+		        this.stopAutoScroll();
+		        return;
+		    }
+		    container.scrollTop += this.autoScrollSpeed;
+		}, 50); // Every 50ms (adjust speed above)
+	    }, (this.autoscrollDelay || 0) * 1000);
+	},
+
+	
+	stopAutoScroll() {
+	    this.autoScrollActive = false;
+	    if (this.autoScrollTimer) {
+		clearInterval(this.autoScrollTimer);
+		this.autoScrollTimer = null;
+	    }
+	},
+	toggleAutoScroll() {
+	    if (this.autoScrollActive) {
+		this.stopAutoScroll();
+		this.updateAutoScrollButton();
+	    } else {
+		this.startAutoScroll();
+		this.updateAutoScrollButton();
+	    }
+	},
+	updateAutoScrollButton() {
+	    // Change button icon/text to reflect state
+	    const btn = document.getElementById('auto-scroll-btn');
+	    if (!btn) return;
+	    if (this.autoScrollActive) {
+		btn.innerHTML = '<i class="fas fa-pause"></i>';
+		btn.title = 'Pause Autoscroll';
+	    } else {
+		btn.innerHTML = '<i class="fas fa-angle-double-down"></i>';
+		btn.title = 'Start Autoscroll';
+	    }
+	},
+
+	autoscrollDelay: Number(localStorage.getItem('autoscrollDelay')) || 3,
+
+
     }; // <--- END OF APP OBJECT
 
     app.init();
+    
+    const scrollBtn = document.getElementById('scroll-to-top-btn');
+    const lyricsContainer = document.getElementById('lyrics-display');
+    const perfMode = document.getElementById('performance-mode');
+
+    // Only show the scroll-to-top button in performance mode AND when scrolled down
+    function updateScrollBtnVisibility() {
+      const perfModeActive = perfMode.style.display === 'flex';
+      if (perfModeActive && lyricsContainer.scrollTop > 2) {
+        scrollBtn.classList.remove('invisible');
+      } else {
+        scrollBtn.classList.add('invisible');
+      }
+    }
+
+    lyricsContainer.addEventListener('scroll', updateScrollBtnVisibility);
+
+    // Also update when you enter performance mode or when a new song is loaded
+    const origDisplayCurrentPerformanceSong = app.displayCurrentPerformanceSong.bind(app);
+    app.displayCurrentPerformanceSong = function(...args) {
+     origDisplayCurrentPerformanceSong(...args); 
+     updateScrollBtnVisibility();
+    };
+
+	// Click handler to jump to top
+    scrollBtn.addEventListener('click', () => {
+      lyricsContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollBtn.style.display = 'none';
+    });
 
 // ==== RESUME LAST PERFORMANCE PROMPT ====
 
@@ -842,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lastPerf && window.location.hash.includes('performance')) {
         // Only prompt if on performance tab
         setTimeout(() => {
-            if (confirm("Resume last performance?\n(Setlist: " + 
+            if (confirm("Resume last performance?\\n(Setlist: " + 
                (lastPerf.setlistId ? (SetlistsManager.getSetlistById(lastPerf.setlistId)?.name || "Unknown Setlist") : "All Songs") + 
                 ", Song #" + (lastPerf.songIndex + 1) + ")")) {
                 // Jump straight to performance mode at saved position
@@ -856,42 +1125,107 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 350); // Let DOM settle
     }
 
+// === AUTO SCROLL BUTTON HANDLERS ===
+setTimeout(() => {
+    const btn = document.getElementById('auto-scroll-btn');
+    if (btn) {
+        btn.addEventListener('click', () => app.toggleAutoScroll());
+    }
+    // Optional: stop autoscroll on touch or mouse
+    app.lyricsDisplay?.addEventListener('touchstart', () => app.stopAutoScroll());
+    app.lyricsDisplay?.addEventListener('mousedown', () => app.stopAutoScroll());
+}, 500); // Wait a bit for DOM
 
     // ==== PERFORMANCE MODE TOUCH SWIPE (Lyrics left/right navigation) ====
     // Make sure this runs AFTER everything is loaded
-    const perfMode = document.getElementById('performance-mode');
-    let touchStartX = 0;
-    let touchEndX = 0;
+//    const perfMode = document.getElementById('performance-mode');
+//    let touchStartX = 0;
+//    let touchEndX = 0;
 
     // Listen for touch events on the performance overlay
-    perfMode.addEventListener('touchstart', function(e) {
-        if (e.touches.length !== 1) return;
-        touchStartX = e.touches[0].clientX;
-    }, { passive: true });
-
-    perfMode.addEventListener('touchmove', function(e) {
-        if (e.touches.length !== 1) return;
-        touchEndX = e.touches[0].clientX;
-    }, { passive: true });
-
-    perfMode.addEventListener('touchend', function(e) {
+//    perfMode.addEventListener('touchstart', function(e) {
+//        if (e.touches.length !== 1) return;
+//        touchStartX = e.touches[0].clientX;
+//    }, { passive: true });
+//
+//    perfMode.addEventListener('touchmove', function(e) {
+//        if (e.touches.length !== 1) return;
+//        touchEndX = e.touches[0].clientX;
+//    }, { passive: true });
+//
+//    perfMode.addEventListener('touchend', function(e) {
         // Only react if in performance mode and a swipe happened
-        if (!app.isPerformanceMode) return;
-        const diffX = touchEndX - touchStartX;
-        if (Math.abs(diffX) > 60) { // Threshold in px
-            if (diffX < 0) {
+//        if (!app.isPerformanceMode) return;
+//        const diffX = touchEndX - touchStartX;
+//        if (Math.abs(diffX) > 60) { // Threshold in px
+//            if (diffX < 0) {
                 // Swiped left, go to next song
-                app.navigatePerformanceSong(1);
-            } else {
+//                app.navigatePerformanceSong(1);
+//            } else {
                 // Swiped right, go to previous song
-                app.navigatePerformanceSong(-1);
-            }
-        }
-        touchStartX = 0;
-        touchEndX = 0;
-    });
+//                app.navigatePerformanceSong(-1);
+//            }
+//        }
+//        touchStartX = 0;
+//        touchEndX = 0;
+//    });
 
     // ==== SETLIST IMPORT/EXPORT HOOKS ====
+    
+    // Open modal
+	document.getElementById('autoscroll-delay-btn').addEventListener('click', function() {
+	  document.getElementById('autoscroll-delay-modal').style.display = 'block';
+	  // Delay
+	  const slider = document.getElementById('autoscroll-delay-slider');
+	  const valSpan = document.getElementById('autoscroll-delay-value');
+	  slider.value = app.autoscrollDelay || 3;
+	  valSpan.textContent = slider.value + 's';
+	  // Speed
+	  const speedSlider = document.getElementById('autoscroll-speed-slider');
+	  const speedVal = document.getElementById('autoscroll-speed-value');
+	  speedSlider.value = app.autoScrollSpeed || 1;
+	  speedVal.textContent = speedSlider.value;
+	});
+
+	// Live update label
+	document.getElementById('autoscroll-delay-slider').addEventListener('input', function(e) {
+	  document.getElementById('autoscroll-delay-value').textContent = e.target.value + 's';
+	});
+
+	document.getElementById('autoscroll-speed-slider').addEventListener('input', function(e) {
+	  document.getElementById('autoscroll-speed-value').textContent = e.target.value;
+	});
+
+	// Save value and close
+	document.getElementById('close-autoscroll-delay-modal').addEventListener('click', function() {
+	  // Delay
+	  const slider = document.getElementById('autoscroll-delay-slider');
+	  app.autoscrollDelay = Number(slider.value);
+	  localStorage.setItem('autoscrollDelay', app.autoscrollDelay);
+	  // Speed
+	  const speedSlider = document.getElementById('autoscroll-speed-slider');
+	  app.autoScrollSpeed = Number(speedSlider.value);
+	  localStorage.setItem('autoscrollSpeed', app.autoScrollSpeed);
+	  document.getElementById('autoscroll-delay-modal').style.display = 'none';
+	});
+
+    document.getElementById('theme-icon-btn').addEventListener('click', function() {
+      document.getElementById('theme-modal').style.display = 'block';
+    });
+
+    document.getElementById('close-theme-modal').addEventListener('click', function() {
+      document.getElementById('theme-modal').style.display = 'none';
+    });
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const theme = btn.getAttribute('data-theme');
+        document.body.dataset.theme = theme;
+        localStorage.setItem('theme', theme);
+        document.getElementById('theme-modal').style.display = 'none';
+      });
+    });
+
 
     // Helper for downloading a file in browser
     function downloadFile(filename, content, mime = "text/plain") {
@@ -913,7 +1247,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("No setlist selected!");
             return;
         }
-        const format = prompt("Export format? (json/txt/csv)", "json") || "json";
+	const format = prompt("Export format? (json/txt/csv)", "json");
+	if (!format) return; // If user cancels, do nothing!
         const content = SetlistsManager.exportSetlist(
             app.currentSetlistId,
             app.songs,
@@ -922,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (content) {
             let ext = format === "csv" ? "csv" : format === "txt" ? "txt" : "json";
             const setlist = SetlistsManager.getSetlistById(app.currentSetlistId);
-            const name = setlist ? setlist.name.replace(/\s+/g, "_") : "setlist";
+            const name = setlist ? setlist.name.replace(/\\s+/g, "_") : "setlist";
             downloadFile(`${name}.${ext}`, content,
                 ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : "text/plain"
             );
@@ -942,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = function (event) {
             let text = event.target.result;
-            let setlistName = prompt("Setlist name?", file.name.replace(/\.[^/.]+$/, ''));
+            let setlistName = prompt("Setlist name?", file.name.replace(/\\.[^/.]+$/, ''));
             if (!setlistName) return;
             // Try to extract as plain text if .docx
             if (file.name.endsWith('.docx')) {
@@ -969,7 +1304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result) {
             app.currentSetlistId = result.setlist.id;
             app.renderSetlists();
-            alert(`Imported: ${result.imported} songs.\nNot found: ${result.notFound.length ? result.notFound.join(', ') : 'None'}`);
+            alert(`Imported: ${result.imported} songs.\\nNot found: ${result.notFound.length ? result.notFound.join(', ') : 'None'}`);
         } else {
             alert("Import failed.");
         }
