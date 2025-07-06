@@ -500,12 +500,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Event Listeners ---
         setupEventListeners() {
-        if (confirm('Delete ALL songs? This cannot be undone!')) {
-            this.songs = [];
-            this.saveData();
-            this.renderSongs();
-         }
-    });
+
+	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
+	    this.navButtons.forEach(btn => {
+	        btn.addEventListener('click', () => {
 
 	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
 	    this.navButtons.forEach(btn => {
