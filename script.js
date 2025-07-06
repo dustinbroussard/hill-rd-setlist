@@ -332,6 +332,102 @@ document.addEventListener('DOMContentLoaded', () => {
 	autoScrollSpeed: Number(localStorage.getItem('autoscrollSpeed')) || 1, // <-- loads saved value or defaults to 1
 	autoScrollActive: false,
 
+        // Render the toolbar for the given tab and attach event listeners
+        renderToolbar(tab) {
+            const toolbarDiv = document.getElementById('tab-toolbar');
+            if (!toolbarDiv) return;
+            toolbarDiv.innerHTML = this.tabToolbars[tab] || '';
+
+            // Re-query/attach event listeners for the new toolbar elements
+            if (tab === 'songs') {
+                this.songSearchInput = document.getElementById('song-search-input');
+                this.addSongBtn = document.getElementById('add-song-btn');
+                this.deleteAllSongsBtn = document.getElementById('delete-all-songs-btn');
+                this.songUploadInput = document.getElementById('song-upload-input');
+
+                this.songSearchInput.addEventListener('input', () => this.renderSongs());
+                this.addSongBtn.addEventListener('click', () => this.openSongModal());
+                this.deleteAllSongsBtn.addEventListener('click', () => {
+                    if (confirm('Delete ALL songs? This cannot be undone!')) {
+                        this.songs = [];
+                        this.saveData();
+                        this.renderSongs();
+                    }
+                });
+                this.songUploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
+            } else if (tab === 'setlists') {
+                this.setlistSelect = document.getElementById('setlist-select');
+                this.newSetlistBtn = document.getElementById('new-setlist-btn');
+                this.renameSetlistBtn = document.getElementById('rename-setlist-btn');
+                this.duplicateSetlistBtn = document.getElementById('duplicate-setlist-btn');
+                this.deleteSetlistBtn = document.getElementById('delete-setlist-btn');
+                // ... (rest for setlist: see the original setupEventListeners for these)
+                this.setlistSelect.addEventListener('change', (e) => this.handleSetlistSelectChange(e));
+                this.newSetlistBtn.addEventListener('click', () => this.openSetlistModal());
+                this.renameSetlistBtn.addEventListener('click', () => this.openSetlistModal('rename'));
+                this.duplicateSetlistBtn.addEventListener('click', () => this.handleDuplicateSetlist());
+                this.deleteSetlistBtn.addEventListener('click', () => this.handleDeleteSetlist());
+                document.getElementById('import-setlist-btn').addEventListener('click', () => {
+                    document.getElementById('import-setlist-file').click();
+                });
+                document.getElementById('export-setlist-btn').addEventListener('click', () => {
+                    if (!this.currentSetlistId) {
+                        alert("No setlist selected!");
+                        return;
+                    }
+                    const format = prompt("Export format? (json/txt/csv)", "json");
+                    if (!format) return;
+                    const content = SetlistsManager.exportSetlist(
+                        this.currentSetlistId,
+                        this.songs,
+                        format.trim().toLowerCase()
+                    );
+                    if (content) {
+                        let ext = format === "csv" ? "csv" : format === "txt" ? "txt" : "json";
+                        const setlist = SetlistsManager.getSetlistById(this.currentSetlistId);
+                        const name = setlist ? setlist.name.replace(/\s+/g, "_") : "setlist";
+                        downloadFile(`${name}.${ext}`, content,
+                            ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : "text/plain"
+                        );
+                    } else {
+                        alert("Export failed.");
+                    }
+                });
+                document.getElementById('import-setlist-file').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        let text = event.target.result;
+                        let setlistName = prompt("Setlist name?", file.name.replace(/\.[^/.]+$/, ''));
+                        if (!setlistName) return;
+                        if (file.name.endsWith('.docx')) {
+                            mammoth.extractRawText({ arrayBuffer: event.target.result })
+                                .then(result => {
+                                    text = result.value;
+                                    finishImportSetlist(setlistName, text);
+                                });
+                        } else {
+                            finishImportSetlist(setlistName, text);
+                        }
+                    };
+                    if (file.name.endsWith('.docx')) {
+                        reader.readAsArrayBuffer(file);
+                    } else {
+                        reader.readAsText(file);
+                    }
+                    e.target.value = '';
+                });
+            } else if (tab === 'performance') {
+                this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
+                this.performanceSongSearch = document.getElementById('performance-song-search');
+                this.startPerformanceBtn = document.getElementById('start-performance-btn');
+                this.performanceSetlistSelect.addEventListener('change', () => this.handlePerformanceSetlistChange());
+                this.performanceSongSearch.addEventListener('input', () => this.handlePerformanceSongSearch());
+                this.startPerformanceBtn.addEventListener('click', () => this.handleStartPerformance());
+            }
+        },
+
         // --- Core App Initialization ---
         init() {
             this.loadData();
