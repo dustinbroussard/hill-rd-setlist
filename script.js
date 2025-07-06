@@ -500,43 +500,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Event Listeners ---
         setupEventListeners() {
-            this.addSongBtn.addEventListener('click', () => this.openSongModal());
             this.saveSongBtn.addEventListener('click', () => this.saveSong());
             this.cancelSongBtn.addEventListener('click', () => this.closeSongModal());
-            this.songSearchInput.addEventListener('input', () => this.renderSongs());
-            this.songUploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
-	    this.deleteAllSongsBtn.addEventListener('click', () => {
-        if (confirm('Delete ALL songs? This cannot be undone!')) {
-            this.songs = [];
-            this.saveData();
-            this.renderSongs();
-         }
-    });
 
-	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
-	    this.navButtons.forEach(btn => {
-	        btn.addEventListener('click', () => {
-		    // Remove 'active' class from all tabs and nav buttons
-		    this.tabs.forEach(tab => tab.classList.remove('active'));
-		    this.navButtons.forEach(b => b.classList.remove('active'));
-		    // Add 'active' class to the clicked nav button and related tab
-		    btn.classList.add('active');
-		    const tabName = btn.getAttribute('data-tab');
-		    document.getElementById(tabName).classList.add('active');
-		    // Update the toolbar and render content for the selected tab
-		    this.renderToolbar(tabName);
-		    if (tabName === 'songs') this.renderSongs();
-		    if (tabName === 'setlists') this.renderSetlists();
-		    if (tabName === 'performance') this.renderPerformanceTab();
-	        });
-	    });
-
+            // NAV BUTTONS (switch tabs)
+            this.navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove 'active' class from all tabs and nav buttons
+                    this.tabs.forEach(tab => tab.classList.remove('active'));
+                    this.navButtons.forEach(b => b.classList.remove('active'));
+                    // Add 'active' class to the clicked nav button and related tab
+                    btn.classList.add('active');
+                    const tabName = btn.getAttribute('data-tab');
+                    document.getElementById(tabName).classList.add('active');
+                    // Update the toolbar and render content for the selected tab
+                    this.renderToolbar(tabName);
+                    if (tabName === 'songs') this.renderSongs();
+                    if (tabName === 'setlists') this.renderSetlists();
+                    if (tabName === 'performance') this.renderPerformanceTab();
+                });
+            });
 
             // Setlist Management
-            this.newSetlistBtn.addEventListener('click', () => this.openSetlistModal());
-            this.renameSetlistBtn.addEventListener('click', () => this.openSetlistModal('rename'));
-            this.duplicateSetlistBtn.addEventListener('click', () => this.handleDuplicateSetlist());
-            this.deleteSetlistBtn.addEventListener('click', () => this.handleDeleteSetlist());
             this.setlistSelect.addEventListener('change', (e) => this.handleSetlistSelectChange(e));
             this.saveSetlistBtn.addEventListener('click', () => this.saveSetlist());
             this.cancelSetlistBtn.addEventListener('click', () => this.closeSetlistModal());
