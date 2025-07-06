@@ -500,19 +500,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Event Listeners ---
         setupEventListeners() {
-
-	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
-	    this.navButtons.forEach(btn => {
-	        btn.addEventListener('click', () => {
-
-	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
-	    this.navButtons.forEach(btn => {
-	        btn.addEventListener('click', () => {
-		    // Remove 'active' class from all tabs and nav buttons
-		    this.tabs.forEach(tab => tab.classList.remove('active'));
-		    this.navButtons.forEach(b => b.classList.remove('active'));
-		    // Add 'active' class to the clicked nav button and related tab
-		    btn.classList.add('active');
+            // === TAB NAVIGATION ===
+            this.navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove 'active' class from all tabs and nav buttons
+                    this.tabs.forEach(tab => tab.classList.remove('active'));
+                    this.navButtons.forEach(b => b.classList.remove('active'));
+                    // Add 'active' class to the clicked nav button and related tab
+                    btn.classList.add('active');
 		    const tabName = btn.getAttribute('data-tab');
 		    document.getElementById(tabName).classList.add('active');
 		    // Update the toolbar and render content for the selected tab
