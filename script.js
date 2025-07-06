@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Core App Initialization ---
         init() {
             this.loadData();
+            this.renderToolbar('songs');
             this.setupEventListeners();
             this.renderSongs();
             this.renderSetlists();
@@ -522,7 +523,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		    btn.classList.add('active');
 		    const tabName = btn.getAttribute('data-tab');
 		    document.getElementById(tabName).classList.add('active');
-		    // If you want, trigger a re-render here for each tab
+		    // Update the toolbar and render content for the selected tab
+		    this.renderToolbar(tabName);
 		    if (tabName === 'songs') this.renderSongs();
 		    if (tabName === 'setlists') this.renderSetlists();
 		    if (tabName === 'performance') this.renderPerformanceTab();
