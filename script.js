@@ -500,29 +500,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Event Listeners ---
         setupEventListeners() {
-            this.saveSongBtn.addEventListener('click', () => this.saveSong());
-            this.cancelSongBtn.addEventListener('click', () => this.closeSongModal());
+        if (confirm('Delete ALL songs? This cannot be undone!')) {
+            this.songs = [];
+            this.saveData();
+            this.renderSongs();
+         }
+    });
 
-            // NAV BUTTONS (switch tabs)
-            this.navButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    // Remove 'active' class from all tabs and nav buttons
-                    this.tabs.forEach(tab => tab.classList.remove('active'));
-                    this.navButtons.forEach(b => b.classList.remove('active'));
-                    // Add 'active' class to the clicked nav button and related tab
-                    btn.classList.add('active');
-                    const tabName = btn.getAttribute('data-tab');
-                    document.getElementById(tabName).classList.add('active');
-                    // Update the toolbar and render content for the selected tab
-                    this.renderToolbar(tabName);
-                    if (tabName === 'songs') this.renderSongs();
-                    if (tabName === 'setlists') this.renderSetlists();
-                    if (tabName === 'performance') this.renderPerformanceTab();
-                });
-            });
+	// === TAB NAVIGATION (Copy and paste this in setupEventListeners) ===
+	    this.navButtons.forEach(btn => {
+	        btn.addEventListener('click', () => {
+		    // Remove 'active' class from all tabs and nav buttons
+		    this.tabs.forEach(tab => tab.classList.remove('active'));
+		    this.navButtons.forEach(b => b.classList.remove('active'));
+		    // Add 'active' class to the clicked nav button and related tab
+		    btn.classList.add('active');
+		    const tabName = btn.getAttribute('data-tab');
+		    document.getElementById(tabName).classList.add('active');
+		    // Update the toolbar and render content for the selected tab
+		    this.renderToolbar(tabName);
+		    if (tabName === 'songs') this.renderSongs();
+		    if (tabName === 'setlists') this.renderSetlists();
+		    if (tabName === 'performance') this.renderPerformanceTab();
+	        });
+	    });
+
 
             // Setlist Management
-            this.setlistSelect.addEventListener('change', (e) => this.handleSetlistSelectChange(e));
             this.saveSetlistBtn.addEventListener('click', () => this.saveSetlist());
             this.cancelSetlistBtn.addEventListener('click', () => this.closeSetlistModal());
 
@@ -530,9 +534,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.currentSetlistSongsContainer.addEventListener('click', (e) => this.handleCurrentSetlistSongsClick(e));
 
             // Performance Mode
-            this.performanceSetlistSelect.addEventListener('change', () => this.handlePerformanceSetlistChange());
-            this.performanceSongSearch.addEventListener('input', () => this.handlePerformanceSongSearch());
-            this.startPerformanceBtn.addEventListener('click', () => this.handleStartPerformance());
             this.performanceSongList.addEventListener('click', (e) => this.handlePerformanceSongClick(e));
 
             // Performance Controls
@@ -670,30 +671,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 },
 
-updateTabToolbar(tab) {
-    const toolbar = document.querySelector('.tab-toolbar');
-    if (!toolbar) return;
-    if (tab === 'songs') {
-        toolbar.innerHTML = `
-            <input class="search-input" type="text" placeholder="Search songs...">
-            <button class="btn" id="add-song-btn">+ Add Song</button>
-            <button class="btn danger" id="delete-all-btn">Delete All</button>
-            <button class="btn" id="upload-btn">Upload</button>
-        `;
-        // Add event listeners if needed (see below)
-    } else if (tab === 'setlists') {
-        toolbar.innerHTML = `
-            <select class="setlist-select"></select>
-            <button class="btn" id="add-setlist-btn">+ Add Setlist</button>
-            <button class="btn" id="delete-setlist-btn">Delete Setlist</button>
-            <!-- ...etc... -->
-        `;
-    } else if (tab === 'lyrics') {
-        toolbar.innerHTML = '';
-        // Or add specific lyrics tools if you want
-    }
-    // You may need to (re)attach event listeners to the new buttons here
-},
+	updateTabToolbar(tab) {
+	    const toolbar = document.querySelector('.tab-toolbar');
+	    if (!toolbar) return;
+
+	    // Clear previous toolbar
+	    toolbar.innerHTML = '';
+
+	    if (tab === 'songs') {
+		toolbar.innerHTML = `
+		    <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
+		    <button class="btn" id="add-song-btn">+ Add Song</button>
+		    <button class="btn danger" id="delete-all-songs-btn">Delete All</button>
+		    <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i> Upload</label>
+		    <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
+		`;
+		// Attach event listeners to *new* toolbar elements
+		const searchInput = document.getElementById('song-search-input');
+		const addBtn = document.getElementById('add-song-btn');
+		const delBtn = document.getElementById('delete-all-songs-btn');
+		const uploadInput = document.getElementById('song-upload-input');
+
+		if (searchInput) searchInput.addEventListener('input', () => this.renderSongs());
+		if (addBtn) addBtn.addEventListener('click', () => this.openSongModal());
+		if (delBtn) delBtn.addEventListener('click', () => {
+		    if (confirm('Delete ALL songs? This cannot be undone!')) {
+		        this.songs = [];
+		        this.saveData();
+		        this.renderSongs();
+		    }
+		});
+		if (uploadInput) uploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
+	    } else if (tab === 'setlists') {
+		toolbar.innerHTML = `
+		    <select id="setlist-select" class="setlist-select"></select>
+		    <button class="btn" id="add-setlist-btn">+ Add Setlist</button>
+		    <button class="btn" id="delete-setlist-btn">Delete Setlist</button>
+		    <!-- Add other setlist controls as needed -->
+		`;
+		// Attach event listeners for setlist tab
+		const setlistSelect = document.getElementById('setlist-select');
+		const addSetlistBtn = document.getElementById('add-setlist-btn');
+		const deleteSetlistBtn = document.getElementById('delete-setlist-btn');
+
+		if (setlistSelect) setlistSelect.addEventListener('change', (e) => this.handleSetlistSelectChange(e));
+		if (addSetlistBtn) addSetlistBtn.addEventListener('click', () => this.openSetlistModal());
+		if (deleteSetlistBtn) deleteSetlistBtn.addEventListener('click', () => this.handleDeleteSetlist());
+		// Add the rest as needed!
+	    } else if (tab === 'lyrics') {
+		toolbar.innerHTML = '';
+	    }
+	},
+
 
 
         // === SETLIST MANAGEMENT (WIRED TO SetlistsManager) ===
