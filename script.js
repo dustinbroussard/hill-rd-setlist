@@ -441,13 +441,16 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.loadData();
             
-            // Initialize DOM elements via renderToolbar first
-            this.renderToolbar('songs');
-            
-            // Now elements should be available
+            // Initialize DOM elements first
             this.setlistSelect = document.getElementById('setlist-select');
             this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
+            if (!this.setlistSelect || !this.performanceSetlistSelect) {
+                console.error('Required DOM elements not found');
+                return;
+            }
             
+            // Initialize UI
+            this.renderToolbar('songs');
             this.setupEventListeners();
             this.renderSongs();
             this.renderSetlists();
@@ -738,8 +741,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSetlists() {
             // Always load from SetlistsManager
             const setlists = SetlistsManager.getAllSetlists();
-            this.setlistSelect.innerHTML = '<option value="">Select a setlist...</option>';
-            this.performanceSetlistSelect.innerHTML = '<option value="">All Songs</option>';
+            if (this.setlistSelect) {
+                this.setlistSelect.innerHTML = '<option value="">Select a setlist...</option>';
+            }
+            if (this.performanceSetlistSelect) {
+                this.performanceSetlistSelect.innerHTML = '<option value="">All Songs</option>';
+            }
 
             setlists.forEach(s => {
                 const opt = document.createElement('option');
