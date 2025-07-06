@@ -291,6 +291,32 @@ document.addEventListener('DOMContentLoaded', () => {
         prevSongBtn: document.getElementById('prev-song-btn'),
         nextSongBtn: document.getElementById('next-song-btn'),
 
+        // Tab Toolbars
+        tabToolbars: {
+            songs: `
+                <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
+                <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i> Add Song</button>
+                <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i> Delete All</button>
+                <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i> Upload</label>
+                <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
+            `,
+            setlists: `
+                <select id="setlist-select" class="setlist-select"></select>
+                <button id="new-setlist-btn" class="btn" title="New Setlist"><i class="fas fa-plus"></i></button>
+                <button id="rename-setlist-btn" class="btn" title="Rename"><i class="fas fa-pen"></i></button>
+                <button id="duplicate-setlist-btn" class="btn" title="Duplicate"><i class="fas fa-copy"></i></button>
+                <button id="delete-setlist-btn" class="btn danger" title="Delete"><i class="fas fa-trash"></i></button>
+                <button id="import-setlist-btn" class="btn" title="Import"><i class="fas fa-file-import"></i></button>
+                <button id="export-setlist-btn" class="btn" title="Export"><i class="fas fa-file-export"></i></button>
+                <input type="file" id="import-setlist-file" accept=".txt,.docx" class="hidden-file">
+            `,
+            performance: `
+                <select id="performance-setlist-select" class="setlist-select"></select>
+                <input type="text" id="performance-song-search" class="search-input" placeholder="Find any song...">
+                <button id="start-performance-btn" class="btn primary"><i class="fas fa-play"></i> Start</button>
+            `
+        },
+
         // State
         songs: [],
         currentSongId: null,
