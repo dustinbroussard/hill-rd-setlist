@@ -430,6 +430,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Core App Initialization ---
         init() {
+            // Ensure DOM elements are properly initialized first
+            this.setlistSelect = document.getElementById('setlist-select');
+            this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
+            
             this.loadData();
             this.renderToolbar('songs');
             this.setupEventListeners();
