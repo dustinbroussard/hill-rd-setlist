@@ -542,6 +542,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	        });
 	    });
 
+	   // After toolbar HTML is injected
+	    this.saveSongBtn = document.getElementById('save-song-btn');
+	    this.cancelSongBtn = document.getElementById('cancel-song-btn');
+	    if (this.saveSongBtn) this.saveSongBtn.onclick = () => this.saveSong();
+	    if (this.cancelSongBtn) this.cancelSongBtn.onclick = () => this.closeSongModal();
 
             // Setlist Management
             this.saveSetlistBtn.addEventListener('click', () => this.saveSetlist());
@@ -753,24 +758,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.performanceSetlistSelect.innerHTML = '<option value="">All Songs</option>';
             }
 
-            setlists.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.name;
-                this.setlistSelect.appendChild(opt);
+	setlists.forEach(s => {
+	    if (this.setlistSelect) {
+		const opt = document.createElement('option');
+		opt.value = s.id;
+		opt.textContent = s.name;
+		this.setlistSelect.appendChild(opt);
+	    }
+	    if (this.performanceSetlistSelect) {
+		const perfOpt = document.createElement('option');
+		perfOpt.value = s.id;
+		perfOpt.textContent = s.name;
+		this.performanceSetlistSelect.appendChild(perfOpt);
+	    }
+	});
 
-                const perfOpt = document.createElement('option');
-                perfOpt.value = s.id;
-                perfOpt.textContent = s.name;
-                this.performanceSetlistSelect.appendChild(perfOpt);
-            });
 
             if (setlists.length && this.currentSetlistId) {
-                this.setlistSelect.value = this.currentSetlistId;
+                if (this.setlistSelect) this.setlistSelect.value = this.currentSetlistId;
                 this.renderSetlistSongs();
             } else if (setlists.length > 0) {
                 this.currentSetlistId = setlists[0].id;
-                this.setlistSelect.value = this.currentSetlistId;
+                if (this.setlistSelect) this.setlistSelect.value = this.currentSetlistId;
                 this.renderSetlistSongs();
             } else {
                 this.currentSetlistId = null;
@@ -1400,74 +1409,6 @@ setTimeout(() => {
         }, 150);
     }
 
-    // EXPORT current setlist
-    const exportBtn = document.getElementById('export-setlist-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-        if (!app.currentSetlistId) {
-            alert("No setlist selected!");
-            return;
-        }
-	const format = prompt("Export format? (json/txt/csv)", "json");
-	if (!format) return; // If user cancels, do nothing!
-        const content = SetlistsManager.exportSetlist(
-            app.currentSetlistId,
-            app.songs,
-            format.trim().toLowerCase()
-        );
-        if (content) {
-            let ext = format === "csv" ? "csv" : format === "txt" ? "txt" : "json";
-            const setlist = SetlistsManager.getSetlistById(app.currentSetlistId);
-            const name = setlist ? setlist.name.replace(/\\s+/g, "_") : "setlist";
-            downloadFile(`${name}.${ext}`, content,
-                ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : "text/plain"
-            );
-        } else {
-            alert("Export failed.");
-        }
-    }); }
-
-    // IMPORT setlist from .txt
-    document.getElementById('import-setlist-btn').addEventListener('click', () => {
-        document.getElementById('import-setlist-file').click();
-    });
-
-    document.getElementById('import-setlist-file').addEventListener('change', function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            let text = event.target.result;
-            let setlistName = prompt("Setlist name?", file.name.replace(/\\.[^/.]+$/, ''));
-            if (!setlistName) return;
-            // Try to extract as plain text if .docx
-            if (file.name.endsWith('.docx')) {
-                // Use mammoth to extract text (assumes it's loaded already)
-                mammoth.extractRawText({ arrayBuffer: event.target.result })
-                    .then(result => {
-                        text = result.value;
-                        finishImportSetlist(setlistName, text);
-                    });
-            } else {
-                finishImportSetlist(setlistName, text);
-            }
-        };
-        if (file.name.endsWith('.docx')) {
-            reader.readAsArrayBuffer(file);
-        } else {
-            reader.readAsText(file);
-        }
-        e.target.value = '';
-    });
-
-    function finishImportSetlist(name, text) {
-        const result = SetlistsManager.importSetlistFromText(name, text, app.songs);
-        if (result) {
-            app.currentSetlistId = result.setlist.id;
-            app.renderSetlists();
-            alert(`Imported: ${result.imported} songs.\\nNot found: ${result.notFound.length ? result.notFound.join(', ') : 'None'}`);
-        } else {
-            alert("Import failed.");
-        }
-    }
+// <-- This closes the "DOMContentLoaded" handler:
 });
+

@@ -319,8 +319,16 @@ body {
     box-shadow: var(--shadow-md);
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+.app-header {
+    padding-top: 1.6em;    /* Adds space above everything in the header */
+    padding-bottom: 0.4em; /* Adds space below the logo, above nav */
+}
+
+.app-nav {
+    margin-top: 1em;    /* Adds space between logo and tabs */
 }
 
 .header-top {
@@ -331,77 +339,91 @@ body {
     gap: 1.2rem; /* Push logo away from theme selector */
 }
 
-
-.app-logo {
-    display: inline-block;
-    padding: 0.38em 1.22em 0.36em 1.22em;
-    background: var(--bg-seconodary);
-    border: 5px solid var(--bg-tertiary);
-    border-radius: 50px;
-    box-sizing: border-box;
-    box-shadow: 0 0 9px 3px var(--accent-glow), 0 0 2.7px 0 var(--accent-primary);
-    margin: 1rem 0.9rem 0.9rem 0; /* Top | Right | Bottom | Left — ↑ more space */
-    user-select: none;
-    transition: background 0.33s, border 0.33s, box-shadow 0.33s;
-}
-
 .app-logo-text {
     font-family: "Neonderthaw", cursive;
     font-weight: 600;
-    font-size: 1.4rem;
-    letter-spacing: 0.14em;
-    color: var(--text-primary) !important;  /* Override for all themes: neon must POP */
+    font-size: 2rem;
+    letter-spacing: 0.13em;
+    color: var(--text-primary) !important;
     text-shadow:
-        0 0 13px var(--text-primary),
-        0 0 24px var(--accent-primary),
-        0 0 48px var(--accent-glow),
-        0 0 66px var(--accent-glow),
-        0 0 12px var(--accent-primary);
-    filter: brightness(1.18) contrast(1.22);
-    animation: neon-flicker-sync 2.6s infinite alternate;
+        0 0 4px var(--accent-primary, #888),
+        0 0 6px var(--accent-glow, #bbb);
+    filter: brightness(1.07) contrast(1.08);
     line-height: 1.11;
     white-space: nowrap;
-    opacity: 1;
+    opacity: 0.97;
+    margin: 0.5em auto 0.5em auto;
+    text-align: center;
     transition: color 0.33s, text-shadow 0.33s, filter 0.33s;
+    margin-top: 1.1em;   /* Space above logo */
+    margin-bottom: 0.7em; /* Space below logo (before tabs/nav) */
+}
+
+/* Heavy glow & flicker ONLY on dark themes */
+[data-theme="default-dark"] .app-logo-text,
+[data-theme="amoled-dark"] .app-logo-text,
+[data-theme="blue-dark"] .app-logo-text,
+[data-theme="red-dark"] .app-logo-text {
+    text-shadow:
+        0 0 13px var(--text-primary, #fff),
+        0 0 24px var(--accent-primary, #fff),
+        0 0 44px var(--accent-glow, #0ff),
+        0 0 12px var(--accent-primary, #fff);
+    filter: brightness(1.13) contrast(1.13);
+    opacity: 1;
+    animation: neon-flicker-sync 4.8s infinite alternate;
+}
+
+/* Minimal glow, NO flicker on light themes */
+[data-theme="default-light"] .app-logo-text,
+[data-theme="blue-light"] .app-logo-text,
+[data-theme="red-light"] .app-logo-text {
+    text-shadow:
+        0 0 1.5px var(--accent-primary, #222);
+    filter: brightness(1.0) contrast(1.04);
+    opacity: 1;
+    animation: none;
 }
 
 .app-logo-text::after {
     content: "";
     display: block;
-    width: 96%;
-    height: 3px;
-    margin: 0.07em auto 0 auto;
+    width: 93%;
+    height: 2px;
+    margin: 0.13em auto 0 auto;
     background: var(--accent-primary);
-    filter: blur(8px) brightness(0.84) opacity(0.22);
+    filter: blur(7px) brightness(0.80) opacity(0.12);
     border-radius: 8px;
-    opacity: 0.09;
-    animation: neon-flicker-sync 2.6s infinite alternate;
+    opacity: 0.07;
     pointer-events: none;
     transition: opacity 0.33s;
 }
 
-/* Same flicker for logo and underline */
+/* Updated, more subtle flicker */
 @keyframes neon-flicker-sync {
-    0% {
-        text-shadow:
-            0 0 7px #fff,
-            0 0 18px var(--accent-primary),
-            0 0 32px var(--accent-glow),
-            0 0 44px var(--accent-glow);
-        opacity: 0.91;
-    }
-    77% {
-        text-shadow:
-            0 0 12px #fff,
-            0 0 34px var(--accent-primary),
-            0 0 46px var(--accent-glow);
-        opacity: 1;
-    }
-    83% { opacity: 0.29; }
-    86% { opacity: 0.09; }
-    89% { opacity: 1; }
-    100% { opacity: 1; }
+  0% {
+    text-shadow:
+      0 0 8px var(--text-primary, #fff),
+      0 0 18px var(--accent-primary, #fff),
+      0 0 28px var(--accent-glow, #0ff),
+      0 0 32px var(--accent-glow, #0ff);
+    opacity: 0.94;
+    filter: brightness(1.06);
+  }
+  78% {
+    text-shadow:
+      0 0 13px var(--text-primary, #fff),
+      0 0 26px var(--accent-primary, #fff),
+      0 0 35px var(--accent-glow, #0ff);
+    opacity: 1;
+    filter: brightness(1.12);
+  }
+  87% { opacity: 0.83; filter: brightness(0.95);}
+  92% { opacity: 0.55; filter: brightness(0.89);}
+  94% { opacity: 1; filter: brightness(1.09);}
+  100% { opacity: 1; filter: brightness(1.10);}
 }
+
 
 .theme-toggle-wrapper {
     min-width: 120px;
@@ -436,6 +458,25 @@ body {
     color: var(--text-secondary);
 }
 
+.page-content, .tab {
+  overflow: visible !important;
+}
+
+.tab-toolbar {
+  width: 100%;
+  margin-top: 0.3em;
+  margin-bottom: 0.1em;
+  display: flex;
+  gap: 1em;
+  align-items: center;
+  background: transparent; /* inherits header background */
+  /* Optional: soft divider line */
+  border-bottom: 1px solid var(--border, #222);
+  padding-bottom: 0.32em;
+  min-height: 2.5em;
+}
+
+
 .app-nav {
     display: flex;
     justify-content: center;
@@ -446,6 +487,7 @@ body {
     box-shadow: none;
     border: none;
 }
+
 
 .nav-button {
     font-size: 1.11rem;
@@ -478,6 +520,37 @@ body {
     transition: box-shadow var(--transition-speed), color var(--transition-speed), background var(--transition-speed), border-color var(--transition-speed);
 }
 
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--accent-secondary, #aaa);
+  font-size: 1.2em;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: color 0.22s, opacity 0.15s;
+}
+.icon-btn:hover, .icon-btn:focus {
+  color: var(--accent-primary, #fff);
+  opacity: 1;
+}
+
+.theme-icon-btn {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  background: none;
+  border: none;
+  color: var(--accent-secondary, #888);
+  font-size: 1.45rem;
+  cursor: pointer;
+  opacity: 0.82;
+  z-index: 100;
+  transition: color 0.22s, opacity 0.14s;
+}
+.theme-icon-btn:hover, .theme-icon-btn:focus {
+  color: var(--accent-primary, #fff);
+  opacity: 1;
+}
 /* ========================================
     Media Queries (already structured, just apply new variables)
     ======================================== */
@@ -562,7 +635,7 @@ body {
 
 .search-input, .setlist-select {
     flex-grow: 1;
-    padding: 0.5rem;
+    padding: 0.5rem;select
     background-color: var(--bg-tertiary); /* Inputs use tertiary background */
     color: var(--text-primary);
     border: 1px solid var(--border); /* Input borders use main border */
@@ -691,7 +764,7 @@ body {
 .lyrics-container {
     flex-grow: 1;
     overflow-y: auto;
-    font-size: 1.5rem;
+    /* font-size: 1.5rem; */ 
     padding: 2rem;
     text-align: center;
     line-height: 1.6;
@@ -713,12 +786,31 @@ body {
     transition: background var(--transition-speed), color var(--transition-speed);
 }
 
-.nav-arrow:hover {
-    background: rgba(0,0,0,0.4);
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-secondary, #222); /* Subtle background */
+    color: var(--accent-secondary, #888);   /* From theme, less “clowny” */
+    border: none;
+    font-size: 2.1rem;
+    cursor: pointer;
+    padding: 0.7rem 1rem;
+    border-radius: var(--border-radius-base, 10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    opacity: 0.75;
+    transition: background 0.22s, color 0.15s, opacity 0.22s;
+    z-index: 1010;
 }
 
-.nav-arrow.left { left: 0; }
-.nav-arrow.right { right: 0; }
+.nav-arrow:hover, .nav-arrow:focus {
+    background: var(--bg-hover, #333);
+    color: var(--accent-primary, #fff);   /* Highlight only on hover */
+    opacity: 1;
+}
+
+.nav-arrow.left { left: 0.5em; }
+.nav-arrow.right { right: 0.5em; }
 
 /* ========================================
     Modal Styling
@@ -1091,10 +1183,16 @@ body {
     margin-bottom: 0.15em;
 }
 
-#font-size-slider {
-    width: 75px !important;
-    height: 16px;
-    margin: 0 0.55em 0 0.25em;
+#font-size-slider.font-slider {
+    width: 350px !important;    /* Make it nice and long */
+    accent-color: var(--accent-primary, #00bcd4);
+    height: 20px;
+    margin: 0 1.5em;
+    background: var(--bg-tertiary, #222);
+    border-radius: 8px;
+}
+.performance-header label[for="font-size-slider"] {
+    display: none;
 }
 
 #exit-performance-btn,
@@ -1107,7 +1205,7 @@ body {
 
 .lyrics-container {
     line-height: 1.05 !important;  /* Super tight but still readable */
-    font-size: 1.05em;             /* Base size, slider still works */
+    /* font-size: 1.5rem; */              /* Base size, slider still works */
     padding: 0.8em 0.5em 1.2em 0.5em !important;
     text-align: center;
     max-width: 900px;
@@ -1203,5 +1301,471 @@ body {
     align-items: center;
     justify-content: center;
     background: rgba(0,0,0,0.8) !important;
+}
+
+}
+
+/* Optional: Only show auto-scroll button in performance mode */
+#performance-mode[style*="display: flex"] .auto-scroll-btn {
+    display: flex !important;
+}
+#performance-mode:not([style*="display: flex"]) .auto-scroll-btn,
+#performance-mode[style*="display: none"] .auto-scroll-btn {
+    display: none !important;
+}
+
+.lyrics-container, #lyrics-content {
+    line-height: 1.33 !important;    /* Pick 1.28-1.38 as best for you */
+    letter-spacing: 0.01em;
+    word-break: break-word;
+    white-space: pre-line;           /* Preserves stanza breaks, trims crazy spacing */
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+#autoscroll-delay-label {
+  margin-right: 0.5em;
+  font-weight: 500;
+  color: var(--text-secondary, #aaa);
+}
+#autoscroll-delay-slider {
+  margin-right: 0.8em;
+}
+
+#autoscroll-delay-modal {
+  z-index: 20000 !important;
+  display: none;  /* Still controlled by JS */
+  position: fixed !important;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.82) !important;
+  align-items: center;
+  justify-content: center;
+}
+#autoscroll-delay-modal[style*="display: block"] {
+  display: flex !important;
+}
+#autoscroll-delay-modal .modal-content {
+  position: relative;
+  z-index: 20001;
+  background: var(--bg-primary, #222);
+}
+
+/* Stack both buttons on the right side with spacing */
+.scroll-to-top-btn,
+.auto-scroll-btn {
+  position: fixed;
+  right: 2.7em;   /* Move farther right, more padding from lyrics */
+  z-index: 2020;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-primary, #00bcd4);
+  color: var(--bg-primary, #111);
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.23);
+  font-size: 1.55rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.93;
+  transition: background 0.22s, opacity 0.14s, color 0.14s;
+}
+
+/* Top button (scroll to top) */
+.scroll-to-top-btn {
+  bottom: 120px; /* 52px (auto-scroll height) + 16px gap + a little extra for thumb reach */
+}
+
+/* Bottom button (autoscroll) */
+.auto-scroll-btn {
+  bottom: 52px;
+  display: flex !important; /* Make sure it always shows in performance mode */
+}
+
+/* No color change when active/focused */
+.scroll-to-top-btn:active,
+.scroll-to-top-btn:focus,
+.scroll-to-top-btn:focus-visible,
+.auto-scroll-btn:active,
+.auto-scroll-btn:focus,
+.auto-scroll-btn:focus-visible {
+  background: var(--accent-primary) !important;
+  color: var(--bg-primary) !important;
+  outline: none !important;
+}
+
+.scroll-to-top-btn i,
+.auto-scroll-btn i {
+  color: inherit !important;
+}
+
+/* Hide both buttons by default */
+.scroll-to-top-btn,
+.auto-scroll-btn {
+  display: none !important;
+}
+
+/* Show both buttons ONLY when performance mode is visible */
+#performance-mode[style*="display: flex"] ~ .scroll-to-top-btn,
+#performance-mode[style*="display: flex"] ~ .auto-scroll-btn {
+  display: flex !important;
+}
+
+.scroll-to-top-btn.invisible {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.18s;
+}
+.scroll-to-top-btn {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.18s;
+}
+
+.song-progress {
+  font-size: 1.02em;
+  color: var(--accent-secondary, #aaa);
+  margin-top: 0.1em;
+  margin-bottom: 0.4em;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  text-align: left;
+  font-family: inherit;
+}
+
+#theme-modal {
+  z-index: 20000 !important;
+}
+#theme-modal .modal-content {
+  z-index: 20100 !important;
+  min-width: 320px;
+  max-width: 420px;
+  margin: 0 auto;
+  margin-top: 4vh !important;    /* Gives a 4% vertical gap from the top */
+  border-radius: 18px;
+}
+#theme-modal .theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7em;
+  justify-content: center;
+  margin-bottom: 1.2em;
+}
+#theme-modal .theme-btn {
+  padding: 0.7em 1.5em;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: 14px;
+  font-size: 1.13em;
+  font-weight: bold;
+  box-shadow: 0 2px 12px var(--accent-glow, rgba(0,0,0,0.13));
+  transition: background 0.18s, color 0.18s, transform 0.15s;
+  cursor: pointer;
+  margin: 0.17em 0.29em;
+  outline: none;
+}
+
+#theme-modal .theme-btn {
+  min-width: 9.4em;
+  max-width: 9.4em;
+  text-align: center;
+  justify-content: center;
+  padding: 0.72em 0;
+  font-size: 1.13em;
+  font-weight: bold;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  margin: 0.17em 0.29em;
+}
+
+
+#theme-modal .theme-btn:hover, #theme-modal .theme-btn:focus {
+  background: var(--accent-hover, #fff);
+  color: var(--accent-primary, #222);
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px var(--accent-glow, rgba(0,0,0,0.23));
+}
+#theme-modal .theme-btn:active {
+  background: var(--accent-active, #bbb);
+  color: var(--accent-primary, #222);
+  transform: scale(0.97);
+}
+#close-theme-modal.btn {
+  background: var(--danger, #ff0044);
+  color: #fff;
+  border-radius: 14px;
+  font-weight: bold;
+  font-size: 1.09em;
+  margin-top: 1.1em;
+  transition: background 0.18s, color 0.18s, transform 0.14s;
+  box-shadow: 0 0 13px 2px #9006, 0 0 0 var(--accent-glow);
+  letter-spacing: 0.02em;
+}
+#close-theme-modal.btn:hover,
+#close-theme-modal.btn:focus {
+  background: #fff;
+  color: var(--danger, #d00020);
+  box-shadow: 0 0 24px 4px var(--danger, #d00020), 0 0 0 var(--accent-glow);
+  transform: scale(1.03);
+}
+
+/* === Custom colors for each theme button in the theme picker === */
+#theme-modal .theme-btn[data-theme="default-dark"] {
+  background: #191b1f;
+  color: #fff;
+  border: 1.5px solid #333;
+}
+#theme-modal .theme-btn[data-theme="default-light"] {
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #bbb;
+}
+#theme-modal .theme-btn[data-theme="blue-dark"] {
+  background: #072366;
+  color: #fff;
+  border: 1.5px solid #369;
+}
+#theme-modal .theme-btn[data-theme="blue-light"] {
+  background: #e8f2ff;
+  color: #0051a8;
+  border: 1.5px solid #7bb5ff;
+}
+#theme-modal .theme-btn[data-theme="red-dark"] {
+  background: #720606;
+  color: #fff;
+  border: 1.5px solid #ff2c2c;
+}
+#theme-modal .theme-btn[data-theme="red-light"] {
+  background: #ffe6e6;
+  color: #b80000;
+  border: 1.5px solid #e98282;
+}
+
+/* Keep hover/focus states consistent, but boost border on focus */
+#theme-modal .theme-btn:hover,
+#theme-modal .theme-btn:focus {
+  outline: 2.5px solid var(--accent-primary, #fff);
+  outline-offset: 1px;
+  border-color: var(--accent-primary, #fff) !important;
+  box-shadow: 0 0 18px 2px var(--accent-glow, #fff4);
+  transform: scale(1.09);
+}
+
+/* === HIGH-CONTRAST ACTIVE TAB FOR ALL THEMES === */
+.app-nav .nav-button.active {
+  background: linear-gradient(
+    135deg, 
+    var(--accent-primary, #fff) 80%, 
+    var(--accent-hover, #f0f0f0) 100%
+  );
+  color: var(--bg-primary, #000);
+  border-bottom: 3.5px solid var(--accent-primary, #fff);
+  font-weight: bold;
+  box-shadow: 0 0 14px 3px var(--accent-glow, #fff7), 0 0 2px var(--accent-primary, #fff);
+  filter: brightness(1.08) contrast(1.12);
+  z-index: 2;
+  font-size: 1.04em;
+  transition: box-shadow 0.18s, color 0.18s, background 0.18s, border-color 0.18s;
+}
+
+/* Tweaks for dark themes to ensure readable text on bright accent tabs */
+[data-theme="red-dark"] .app-nav .nav-button.active,
+[data-theme="blue-dark"] .app-nav .nav-button.active {
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--accent-active, #ff2d2d) 70%,
+    var(--accent-primary, #fff) 100%
+  );
+  border-bottom: 3.5px solid var(--accent-hover, #fff);
+  box-shadow: 0 0 18px 2px var(--accent-glow, #fff7), 0 0 0 var(--accent-active, #ff2d2d);
+  filter: brightness(1.22) contrast(1.22);
+}
+
+/* Optional: add a soft text-shadow for even more pop */
+.app-nav .nav-button.active {
+  text-shadow: 0 0 6px var(--accent-primary, #fff), 0 0 10px var(--accent-glow, #fff9);
+}
+
+.performance-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;   /* space between buttons */
+  justify-content: flex-end;
+  margin-right: 0.35em;
+}
+
+/* Base style for all performance corner buttons */
+.performance-controls .icon-btn {
+  background: var(--bg-tertiary, #1a1a1a);
+  color: var(--accent-primary, #fff);
+  border: none;
+  border-radius: 50%;
+  width: 2.1em;
+  height: 2.1em;
+  font-size: 1.25em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 7px rgba(0,0,0,0.08);
+  transition: background 0.14s, color 0.16s, box-shadow 0.13s, transform 0.15s;
+  cursor: pointer;
+  margin: 0 0.06em;
+  opacity: 0.95;
+}
+
+.performance-controls .icon-btn:hover,
+.performance-controls .icon-btn:focus {
+  background: var(--accent-hover, #fff);
+  color: var(--accent-primary, #222);
+  box-shadow: 0 2px 16px var(--accent-glow, #fff8);
+  transform: scale(1.13);
+  opacity: 1;
+}
+
+/* Danger/Exit button: red */
+.performance-controls .icon-btn.danger,
+.performance-controls .icon-btn[title*="Exit"] {
+  background: var(--danger, #ef4444);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(255,0,0,0.10);
+}
+.performance-controls .icon-btn.danger:hover,
+.performance-controls .icon-btn.danger:focus,
+.performance-controls .icon-btn[title*="Exit"]:hover,
+.performance-controls .icon-btn[title*="Exit"]:focus {
+  background: #fff;
+  color: var(--danger, #ef4444);
+  box-shadow: 0 0 20px 2px var(--danger, #ef4444), 0 0 8px var(--accent-glow, #fff3);
+}
+
+.performance-controls .icon-btn:active {
+  transform: scale(0.96);
+}
+
+/* Optional: icon size tweak */
+.performance-controls .icon-btn i {
+  font-size: 1.06em;
+}
+
+#autoscroll-settings-btn i {
+    color: var(--accent-primary, #fff) !important;
+}
+
+
+
+/* Toolbar item spacing—just a bit more subtle */
+#tab-toolbar > * {
+  margin-right: 12px;
+}
+#tab-toolbar > *:last-child {
+  margin-right: 0;
+}
+
+/* Optional: Make select/inputs/buttons a little softer to fit the app's style */
+#tab-toolbar select,
+#tab-toolbar input,
+#tab-toolbar .btn {
+  border-radius: 10px;
+  box-shadow: none;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary, #10192a);
+  color: var(--text-primary, #eee);
+  transition: border 0.15s, background 0.15s;
+}
+
+#tab-toolbar .btn {
+  background: var(--accent-primary, #2e4266) !important;
+  color: var(--bg-primary, #fff) !important;
+  border: none;
+  font-weight: 600;
+  border-radius: var(--border-radius-base, 12px);
+  box-shadow: 0 2px 6px var(--accent-glow, #4441);
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+#tab-toolbar .btn:hover,
+#tab-toolbar .btn:focus {
+  background: var(--accent-hover, #444) !important;
+  color: var(--accent-primary, #fff) !important;
+}
+#tab-toolbar .btn.danger {
+  background: var(--danger, #ff4444) !important;
+  color: #fff !important;
+}
+#tab-toolbar .btn.danger:hover,
+#tab-toolbar .btn.danger:focus {
+  background: #c1001f !important;
+  color: #fff !important;
+}
+
+
+#tab-toolbar .btn.danger {
+  background: var(--danger, #c34040);
+}
+
+#tab-toolbar label {
+  cursor: pointer;
+}
+
+/* A little hover action for fun */
+#tab-toolbar .btn:hover,
+#tab-toolbar select:hover,
+#tab-toolbar input:hover {
+  filter: brightness(1.07);
+  border-color: var(--accent, #4a90e2);
+}
+
+
+#tab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: .1rem;
+  margin-bottom: 0rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-tertiary, #1a2844);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px .1px var(--accent-glow, #5551), 0 1.5px 8px #0003;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1.5px solid var(--border-light);
+  z-index: 2;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+
+/* THEME-FRIENDLY TOOLBAR BUTTONS */
+#tab-toolbar .btn, 
+#tab-toolbar label.btn {
+  background: var(--accent-primary, #2e4266) !important;
+  color: var(--bg-primary, #fff) !important;
+  border: none;
+  font-weight: 600;
+  border-radius: var(--border-radius-base, 12px);
+  box-shadow: 0 2px 6px var(--accent-glow, #4441);
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+#tab-toolbar .btn:hover,
+#tab-toolbar .btn:focus,
+#tab-toolbar label.btn:hover,
+#tab-toolbar label.btn:focus {
+  background: var(--accent-hover, #444) !important;
+  color: var(--accent-primary, #fff) !important;
+}
+
+#tab-toolbar .btn.danger {
+  background: var(--danger, #ff4444) !important;
+  color: #fff !important;
+}
+#tab-toolbar .btn.danger:hover,
+#tab-toolbar .btn.danger:focus {
+  background: #c1001f !important;
+  color: #fff !important;
 }
 

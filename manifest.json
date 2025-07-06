@@ -1,4 +1,3 @@
-
 {
     "name": "HIll Rd. Setlist Manager",
     "short_name": "SetlistMgr",
@@ -18,5 +17,7 @@
             "sizes": "512x512",
             "type": "image/png"
         }
-    ]
+    ],
+    "orientation": "portrait"
 }
+
