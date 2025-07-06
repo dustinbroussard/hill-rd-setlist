@@ -441,19 +441,24 @@ document.addEventListener('DOMContentLoaded', () => {
         init() {
             this.loadData();
             
-            // Initialize DOM elements first
-            this.setlistSelect = document.getElementById('setlist-select');
-            this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
-            if (!this.setlistSelect || !this.performanceSetlistSelect) {
-                console.error('Required DOM elements not found');
-                return;
-            }
-            
             // Initialize UI
             this.renderToolbar('songs');
+            
+            // Initialize DOM elements - these will be set by renderToolbar if they exist
+            this.setlistSelect = document.getElementById('setlist-select');
+            this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
+            
+            if (!this.setlistSelect || !this.performanceSetlistSelect) {
+                console.warn('Optional DOM elements not found - setlist functionality limited');
+            }
+            
             this.setupEventListeners();
             this.renderSongs();
-            this.renderSetlists();
+            
+            // Only try to render setlists if elements exist
+            if (this.setlistSelect && this.performanceSetlistSelect) {
+                this.renderSetlists();
+            }
         },
 
         // --- Data Management ---
@@ -1396,7 +1401,9 @@ setTimeout(() => {
     }
 
     // EXPORT current setlist
-    document.getElementById('export-setlist-btn').addEventListener('click', () => {
+    const exportBtn = document.getElementById('export-setlist-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
         if (!app.currentSetlistId) {
             alert("No setlist selected!");
             return;
@@ -1418,7 +1425,7 @@ setTimeout(() => {
         } else {
             alert("Export failed.");
         }
-    });
+    }); }
 
     // IMPORT setlist from .txt
     document.getElementById('import-setlist-btn').addEventListener('click', () => {
