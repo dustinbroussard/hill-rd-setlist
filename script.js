@@ -335,8 +335,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render the toolbar for the given tab and attach event listeners
         renderToolbar(tab) {
             const toolbarDiv = document.getElementById('tab-toolbar');
-            if (!toolbarDiv) return;
+            if (!toolbarDiv) {
+                console.error('Tab toolbar element not found');
+                return;
+            }
             toolbarDiv.innerHTML = this.tabToolbars[tab] || '';
+            
+            // Reinitialize elements after rendering toolbar
+            if (tab === 'setlists' || tab === 'performance') {
+                this.setlistSelect = document.getElementById('setlist-select');
+                this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
+            }
 
             // Re-query/attach event listeners for the new toolbar elements
             if (tab === 'songs') {
@@ -430,12 +439,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Core App Initialization ---
         init() {
-            // Ensure DOM elements are properly initialized first
+            this.loadData();
+            
+            // Initialize DOM elements via renderToolbar first
+            this.renderToolbar('songs');
+            
+            // Now elements should be available
             this.setlistSelect = document.getElementById('setlist-select');
             this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
             
-            this.loadData();
-            this.renderToolbar('songs');
             this.setupEventListeners();
             this.renderSongs();
             this.renderSetlists();
