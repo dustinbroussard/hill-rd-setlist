@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // State
         songs: [],
         performanceSetlistId: null,
-        resizeTimeout: null,
         performanceSongs: [],
         currentPerformanceSongIndex: 0,
         isPerformanceMode: true,
@@ -76,14 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Setup event listeners
         setupEventListeners() {
-            // Add window resize handler
-            window.addEventListener('resize', () => this.handleResize());
-            
-            // Also trigger autofit when orientation changes on mobile
-            window.addEventListener('orientationchange', () => {
-                setTimeout(() => this.autoFitLyricsFont(), 300);
-            });
-
             this.fontSizeSlider.addEventListener('input', (e) => {
                 if (this.performanceSongs && this.performanceSongs[this.currentPerformanceSongIndex]) {
                     const songId = this.performanceSongs[this.currentPerformanceSongIndex].id;
@@ -205,43 +196,46 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // Auto-fit lyrics font
-	// --- NEW AUTOFIT: Replace your current autoFitLyricsFont() in performance.js ---
-autoFitLyricsFont() {
-    const container = this.lyricsDisplay;
-    const overlay = this.performanceMode;
-    if (!container || !overlay || overlay.style.display !== 'flex') return;
+        autoFitLyricsFont() {
+            const container = this.lyricsDisplay;
+            const overlay = this.performanceMode;
+            if (!container || !overlay || overlay.style.display !== 'flex') return;
 
-    // Reset font size to a baseline
-    let fontSize = 20; // px
-    container.style.fontSize = fontSize + 'px';
+            setTimeout(() => {
+                let slider = this.fontSizeSlider;
+                let minRem = slider ? parseFloat(slider.value) : 1.5;
+                if (isNaN(minRem) || minRem < 0.8) minRem = 1.5;
 
-    // Get the available area for lyrics (subtract header height and a little fudge)
-    const header = overlay.querySelector('.performance-header');
-    const headerHeight = header ? header.offsetHeight : 0;
-    const containerHeight = overlay.offsetHeight - headerHeight - 24; // padding/fudge
+                const header = overlay.querySelector('.performance-header');
+                const headerHeight = header ? header.offsetHeight : 0;
+                const cs = getComputedStyle(container);
+                const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+                const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+                const fudge = 16;
+                const maxHeight = overlay.offsetHeight - headerHeight - paddingY - borderY - fudge;
 
-    const containerWidth = overlay.offsetWidth - 32; // padding/fudge
+                let fontRem = minRem;
+                container.style.transition = "none";
+                container.style.fontSize = `${fontRem}rem`;
 
-    // Grow font until it doesn't fit (up to a max)
-    while (
-        container.scrollHeight < containerHeight * 0.97 &&
-        container.scrollWidth < containerWidth * 0.97 &&
-        fontSize < 140
-    ) {
-        fontSize += 2;
-        container.style.fontSize = fontSize + 'px';
-    }
-    // Shrink if we overdid it
-    while (
-        (container.scrollHeight > containerHeight ||
-        container.scrollWidth > containerWidth) &&
-        fontSize > 10
-    ) {
-        fontSize -= 1;
-        container.style.fontSize = fontSize + 'px';
-    }
-},
+                while (container.scrollHeight <= maxHeight && fontRem < 8.0) {
+                    fontRem += 0.04;
+                    container.style.fontSize = `${fontRem}rem`;
+                }
+                if (container.scrollHeight > maxHeight) {
+                    fontRem -= 0.04;
+                    container.style.fontSize = `${fontRem}rem`;
+                }
+                if (fontRem < minRem) {
+                    fontRem = minRem;
+                    container.style.fontSize = `${fontRem}rem`;
+                }
 
+                container.style.transition = "font-size 0.18s cubic-bezier(.8,0,.2,1)";
+                setTimeout(() => container.style.transition = "", 220);
+                container.scrollTop = 0;
+            }, 30);
+        },
 
         // Auto-scroll functions
         startAutoScroll() {
@@ -261,14 +255,6 @@ autoFitLyricsFont() {
                     container.scrollTop += this.autoScrollSpeed;
                 }, 50);
             }, this.autoscrollDelay * 1000);
-        },
-
-        handleResize() {
-            // Debounce resize events
-            clearTimeout(this.resizeTimeout);
-            this.resizeTimeout = setTimeout(() => {
-                this.autoFitLyricsFont();
-            }, 150);
         },
 
         stopAutoScroll() {
