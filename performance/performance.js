@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         autoScrollSpeed: Number(localStorage.getItem('autoscrollSpeed')) || 1,
         autoScrollActive: false,
         autoscrollDelay: Number(localStorage.getItem('autoscrollDelay')) || 3,
+        resizeObserver: null,
 
         // Initialize
         init() {
@@ -38,6 +39,23 @@ document.addEventListener('DOMContentLoaded', () => {
             this.setupEventListeners();
             this.loadPerformanceState();
             this.displayCurrentPerformanceSong();
+            this.setupResizeObserver();
+        },
+
+        // Setup resize observer for auto-fit
+        setupResizeObserver() {
+            if (window.ResizeObserver) {
+                this.resizeObserver = new ResizeObserver(() => {
+                    if (!this.autoFitManuallyOverridden) {
+                        // Debounce the resize
+                        clearTimeout(this.resizeTimeout);
+                        this.resizeTimeout = setTimeout(() => {
+                            this.autoFitLyricsFont();
+                        }, 100);
+                    }
+                });
+                this.resizeObserver.observe(this.performanceMode);
+            }
         },
 
         // Load data from localStorage
@@ -77,9 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Setup event listeners
         setupEventListeners() {
             this.fontSizeSlider.addEventListener('input', (e) => {
-                this.autoFitManuallyOverridden = true; // Manual control now!
+                this.autoFitManuallyOverridden = true;
                 const fontSize = parseFloat(e.target.value) * 16; // rem to px
                 this.lyricsDisplay.style.fontSize = fontSize + 'px';
+                // Update scroll button visibility when font changes
+                setTimeout(() => this.updateScrollButtonsVisibility(), 100);
             });
 
             this.toggleThemeBtn.addEventListener('click', () => this.handlePerformanceThemeToggle());
@@ -110,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('autoscrollSpeed', this.autoScrollSpeed);
                 this.autoscrollDelayModal.style.display = 'none';
             });
-            this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollBtnVisibility());
+            this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
         },
@@ -122,12 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.autoFitManuallyOverridden = false; // Reset override for new song
 
-            // Autofit font size
-            const fontSize = this.autoFitLyricsFont(); // returns actual px size used
-            // Set the slider to match autofit
-            this.fontSizeSlider.value = (fontSize / 16).toFixed(2); // convert px to rem
-
-            // Show lyrics
+            // Process lyrics
             let lines = song.lyrics.split('\n').map(line => line.trim());
             const normTitle = song.title.trim().toLowerCase();
             let removed = 0;
@@ -145,7 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             this.lyricsDisplay.textContent = lines.join('\n');
 
-            setTimeout(() => this.autoFitLyricsFont(), 30);
+            // Wait for DOM to update, then auto-fit
+            requestAnimationFrame(() => {
+                const fontSize = this.autoFitLyricsFont();
+                this.fontSizeSlider.value = (fontSize / 16).toFixed(2);
+                
+                // Update button visibility after font is set
+                setTimeout(() => this.updateScrollButtonsVisibility(), 100);
+            });
 
             this.prevSongBtn.style.display = this.currentPerformanceSongIndex > 0 ? 'block' : 'none';
             this.nextSongBtn.style.display = this.currentPerformanceSongIndex < this.performanceSongs.length - 1 ? 'block' : 'none';
@@ -161,13 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.currentPerformanceSongIndex = newIndex;
                 this.displayCurrentPerformanceSong();
             }
-        },
-
-        // Handle font size change
-        handleFontSizeChange(e) {
-            const fontSize = e.target.value;
-            this.lyricsDisplay.style.fontSize = fontSize + 'rem';
-            this.autoFitLyricsFont();
         },
 
         // Toggle theme
@@ -187,49 +202,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 timestamp: Date.now()
             };
             localStorage.setItem('lastPerformance', JSON.stringify(perf));
+            
+            // Clean up resize observer
+            if (this.resizeObserver) {
+                this.resizeObserver.disconnect();
+            }
+            
             window.location.href = '../index.html#performance';
         },
 
-        // Auto-fit lyrics font
+        // Auto-fit lyrics font - FIXED VERSION
         autoFitLyricsFont() {
-            // If user has manually overridden, bail out
-            if (this.autoFitManuallyOverridden) return parseFloat(this.lyricsDisplay.style.fontSize) || 24;
+            if (this.autoFitManuallyOverridden) {
+                return parseFloat(this.lyricsDisplay.style.fontSize) || 24;
+            }
 
             const container = this.lyricsDisplay;
             const overlay = this.performanceMode;
-            if (!container || !overlay || overlay.style.display !== 'flex') return 24;
+            
+            if (!container || !overlay) return 24;
 
-            // Reset font size to a baseline
-            let fontSize = 24; // px
-            container.style.fontSize = fontSize + 'px';
-
-            // Get the available area for lyrics
+            // Get dimensions
             const header = overlay.querySelector('.performance-header');
             const headerHeight = header ? header.offsetHeight : 0;
-            const containerHeight = overlay.offsetHeight - headerHeight - 24; // fudge
-            const containerWidth = overlay.offsetWidth - 32; // fudge
+            const availableHeight = overlay.clientHeight - headerHeight;
+            const availableWidth = overlay.clientWidth;
+            
+            // Account for padding (from CSS: 0.8em top, 0.5em sides, 1.2em bottom)
+            const paddingHeight = 32; // roughly 0.8em + 1.2em at base size
+            const paddingWidth = 16; // roughly 0.5em * 2 at base size
+            
+            const targetHeight = availableHeight - paddingHeight;
+            const targetWidth = availableWidth - paddingWidth;
 
-            // Grow font until it doesn't fit (up to a max)
-            while (
-                container.scrollHeight < containerHeight * 0.97 &&
-                container.scrollWidth < containerWidth * 0.97 &&
-                fontSize < 120
-            ) {
-                fontSize += 2;
-                container.style.fontSize = fontSize + 'px';
-            }
-            // Shrink if we went too far
-            while (
-                (container.scrollHeight > containerHeight ||
-                container.scrollWidth > containerWidth) &&
-                fontSize > 12
-            ) {
-                fontSize -= 1;
-                container.style.fontSize = fontSize + 'px';
+            // Binary search for optimal font size
+            let minSize = 12;
+            let maxSize = 120;
+            let optimalSize = 24;
+
+            while (maxSize - minSize > 1) {
+                const midSize = Math.floor((minSize + maxSize) / 2);
+                container.style.fontSize = midSize + 'px';
+                
+                // Force reflow
+                container.offsetHeight;
+                
+                const fitsHeight = container.scrollHeight <= targetHeight;
+                const fitsWidth = container.scrollWidth <= targetWidth;
+                
+                if (fitsHeight && fitsWidth) {
+                    optimalSize = midSize;
+                    minSize = midSize;
+                } else {
+                    maxSize = midSize;
+                }
             }
 
-            // Return final px size for slider sync
-            return fontSize;
+            // Set the final size
+            container.style.fontSize = optimalSize + 'px';
+            
+            // Debug logging (remove in production)
+            console.log('Auto-fit results:', {
+                availableHeight,
+                availableWidth,
+                targetHeight,
+                targetWidth,
+                scrollHeight: container.scrollHeight,
+                scrollWidth: container.scrollWidth,
+                fontSize: optimalSize
+            });
+
+            return optimalSize;
         },
 
         // Auto-scroll functions
@@ -267,11 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleAutoScroll() {
             if (this.autoScrollActive) {
                 this.stopAutoScroll();
-                this.updateAutoScrollButton();
             } else {
                 this.startAutoScroll();
-                this.updateAutoScrollButton();
             }
+            this.updateAutoScrollButton();
         },
 
         updateAutoScrollButton() {
@@ -283,13 +325,33 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.title = this.autoScrollActive ? 'Pause Autoscroll' : 'Start Autoscroll';
         },
 
-        updateScrollBtnVisibility() {
-            const perfModeActive = this.performanceMode.style.display === 'flex';
-            if (perfModeActive && this.lyricsDisplay.scrollTop > 2) {
+        // FIXED: Combined scroll button visibility logic
+        updateScrollButtonsVisibility() {
+            const container = this.lyricsDisplay;
+            if (!container) return;
+            
+            const needsScroll = container.scrollHeight > container.clientHeight;
+            const hasScrolled = container.scrollTop > 2;
+            
+            // Show/hide scroll to top button
+            if (hasScrolled) {
                 this.scrollToTopBtn.classList.remove('invisible');
             } else {
                 this.scrollToTopBtn.classList.add('invisible');
             }
+            
+            // Show/hide auto-scroll button based on whether scrolling is needed
+            if (needsScroll) {
+                this.autoScrollBtn.style.display = 'flex';
+            } else {
+                this.autoScrollBtn.style.display = 'none';
+                this.stopAutoScroll(); // Stop auto-scroll if no longer needed
+            }
+        },
+
+        // Legacy method name for compatibility
+        updateScrollBtnVisibility() {
+            this.updateScrollButtonsVisibility();
         }
     };
 
