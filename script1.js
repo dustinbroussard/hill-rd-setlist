@@ -2,11 +2,11 @@
 function normalizeSetlistName(name) {
     return name.replace(/\.[^/.]+$/, '')  // Remove file extension
         .replace(/[_\-]+/g, ' ')
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[^\\w\\s]/g, '')
+        .replace(/\\s+/g, ' ')
         .trim()
         .toLowerCase()
-        .replace(/\b\w/g, c => c.toUpperCase());
+        .replace(/\\b\\w/g, c => c.toUpperCase());
 }
 
 const SetlistsManager = (() => {
@@ -72,7 +72,7 @@ const SetlistsManager = (() => {
                 s.id !== id && s.name.toLowerCase() === normalized.toLowerCase()
             );
             if (existing) throw new Error(`A setlist named "${normalized}" already exists`);
-            setlist.name = newName.trim(); // Keep original formatting case/whitespace (except trimming)
+            setlist.name = normalized;
             setlist.updatedAt = Date.now();
             save();
             return setlist;
@@ -1370,7 +1370,7 @@ setTimeout(() => {
     // ==== SETLIST IMPORT/EXPORT HOOKS ====
     
     // Open modal
-	document.getElementById('autoscroll-delay-btn')?.addEventListener('click', function() {
+	document.getElementById('autoscroll-delay-btn').addEventListener('click', function() {
 	  document.getElementById('autoscroll-delay-modal').style.display = 'block';
 	  // Delay
 	  const slider = document.getElementById('autoscroll-delay-slider');
@@ -1406,15 +1406,15 @@ setTimeout(() => {
 	  document.getElementById('autoscroll-delay-modal').style.display = 'none';
 	});
 
-    document.getElementById('theme-icon-btn')?.addEventListener('click', function() {
+    document.getElementById('theme-icon-btn').addEventListener('click', function() {
       document.getElementById('theme-modal').style.display = 'block';
     });
 
-    document.getElementById('close-theme-modal')?.addEventListener('click', function() {
+    document.getElementById('close-theme-modal').addEventListener('click', function() {
       document.getElementById('theme-modal').style.display = 'none';
     });
 
-    document.querySelectorAll('.theme-btn')?.forEach(btn => {
+    document.querySelectorAll('.theme-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         const theme = btn.getAttribute('data-theme');
         document.body.dataset.theme = theme;
@@ -1438,11 +1438,11 @@ setTimeout(() => {
         }, 150);
     }
 // IMPORT setlist from .txt
-    document.getElementById('import-setlist-btn')?.addEventListener('click', () => {
+    document.getElementById('import-setlist-btn').addEventListener('click', () => {
         document.getElementById('import-setlist-file').click();
     });
 
-    document.getElementById('import-setlist-file')?.addEventListener('change', function (e) {
+    document.getElementById('import-setlist-file').addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -1483,3 +1483,4 @@ setTimeout(() => {
 
 // <-- This closes the "DOMContentLoaded" handler:
 });
+
