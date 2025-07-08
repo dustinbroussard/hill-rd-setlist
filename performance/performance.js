@@ -205,55 +205,42 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // Auto-fit lyrics font
-	autoFitLyricsFont() {
-	    const container = this.lyricsDisplay;
-	    const overlay = this.performanceMode;
-	    if (!container || !overlay || overlay.style.display !== 'flex') return;
+	// --- NEW AUTOFIT: Replace your current autoFitLyricsFont() in performance.js ---
+autoFitLyricsFont() {
+    const container = this.lyricsDisplay;
+    const overlay = this.performanceMode;
+    if (!container || !overlay || overlay.style.display !== 'flex') return;
 
-	    setTimeout(() => {
-		// Get the min font size from the slider (honor user preference)
-		let slider = this.fontSizeSlider;
-		let minRem = slider ? parseFloat(slider.value) : 1.5;
-		if (isNaN(minRem) || minRem < 0.8) minRem = 1.5;
+    // Reset font size to a baseline
+    let fontSize = 20; // px
+    container.style.fontSize = fontSize + 'px';
 
-		// Calculate usable height
-		const header = overlay.querySelector('.performance-header');
-		const headerHeight = header ? header.offsetHeight : 0;
-		const style = getComputedStyle(container);
-		const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-		const borderY = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-		// 0.5rem fudge factor (tweak if you want)
-		const fudge = 10;
-		const maxHeight = overlay.offsetHeight - headerHeight - paddingY - borderY - fudge;
+    // Get the available area for lyrics (subtract header height and a little fudge)
+    const header = overlay.querySelector('.performance-header');
+    const headerHeight = header ? header.offsetHeight : 0;
+    const containerHeight = overlay.offsetHeight - headerHeight - 24; // padding/fudge
 
-		// Start at user's chosen min size, then increase
-		let fontRem = minRem;
-		container.style.fontSize = `${fontRem}rem`;
-		// Temporarily allow overflow to measure properly
-		container.style.overflowY = 'auto';
+    const containerWidth = overlay.offsetWidth - 32; // padding/fudge
 
-		// Try to fill container, but stop if we get too big
-		while (container.scrollHeight <= maxHeight && fontRem < 6.0) {
-		    fontRem += 0.03;
-		    container.style.fontSize = `${fontRem}rem`;
-		}
-		// If we overshot, go back one step
-		if (container.scrollHeight > maxHeight) {
-		    fontRem -= 0.03;
-		    container.style.fontSize = `${fontRem}rem`;
-		}
-		// Always respect user’s slider as the minimum
-		if (fontRem < minRem) {
-		    fontRem = minRem;
-		    container.style.fontSize = `${fontRem}rem`;
-		}
-
-		// Restore container style
-		container.style.transition = "font-size 0.18s cubic-bezier(.8,0,.2,1)";
-		setTimeout(() => container.style.transition = "", 220);
-		// Never force scrollTop unless you’re switching songs (that’s handled elsewhere)
-	    }, 24); // Small timeout helps on tab switches
-	},
+    // Grow font until it doesn't fit (up to a max)
+    while (
+        container.scrollHeight < containerHeight * 0.97 &&
+        container.scrollWidth < containerWidth * 0.97 &&
+        fontSize < 140
+    ) {
+        fontSize += 2;
+        container.style.fontSize = fontSize + 'px';
+    }
+    // Shrink if we overdid it
+    while (
+        (container.scrollHeight > containerHeight ||
+        container.scrollWidth > containerWidth) &&
+        fontSize > 10
+    ) {
+        fontSize -= 1;
+        container.style.fontSize = fontSize + 'px';
+    }
+},
 
 
         // Auto-scroll functions
