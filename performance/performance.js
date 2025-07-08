@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // State
         songs: [],
         performanceSetlistId: null,
+        resizeTimeout: null,
         performanceSongs: [],
         currentPerformanceSongIndex: 0,
         isPerformanceMode: true,
@@ -75,6 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Setup event listeners
         setupEventListeners() {
+            // Add window resize handler
+            window.addEventListener('resize', () => this.handleResize());
+            
+            // Also trigger autofit when orientation changes on mobile
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => this.autoFitLyricsFont(), 300);
+            });
+
             this.fontSizeSlider.addEventListener('input', (e) => {
                 if (this.performanceSongs && this.performanceSongs[this.currentPerformanceSongIndex]) {
                     const songId = this.performanceSongs[this.currentPerformanceSongIndex].id;
@@ -265,6 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.scrollTop += this.autoScrollSpeed;
                 }, 50);
             }, this.autoscrollDelay * 1000);
+        },
+
+        handleResize() {
+            // Debounce resize events
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = setTimeout(() => {
+                this.autoFitLyricsFont();
+            }, 150);
         },
 
         stopAutoScroll() {
