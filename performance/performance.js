@@ -96,8 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners() {
             this.fontSizeSlider.addEventListener('input', (e) => {
                 this.autoFitManuallyOverridden = true;
-                const fontSize = parseFloat(e.target.value) * 16; // rem to px
+                const fontSize = parseFloat(e.target.value);
                 this.lyricsDisplay.style.fontSize = fontSize + 'px';
+                // Save manual size for this song
+                const currentSong = this.performanceSongs[this.currentPerformanceSongIndex];
+                if (currentSong) {
+                    localStorage.setItem('fontSize_' + currentSong.id, fontSize);
+                }
                 // Update scroll button visibility when font changes
                 setTimeout(() => this.updateScrollButtonsVisibility(), 100);
             });
@@ -140,7 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const song = this.performanceSongs[this.currentPerformanceSongIndex];
             if (!song) return;
 
-            this.autoFitManuallyOverridden = false; // Reset override for new song
+            // Reset override for new song (unless saved size exists)
+            const savedSize = localStorage.getItem('fontSize_' + song.id);
+            if (savedSize) {
+                this.autoFitManuallyOverridden = true;
+                this.fontSizeSlider.value = savedSize;
+                this.lyricsDisplay.style.fontSize = savedSize + 'px';
+            } else {
+                this.autoFitManuallyOverridden = false;
+            }
 
             // Process lyrics
             let lines = song.lyrics.split('\n').map(line => line.trim());
