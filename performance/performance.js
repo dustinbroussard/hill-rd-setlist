@@ -97,6 +97,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.currentPerformanceSongIndex === -1) {
                 this.currentPerformanceSongIndex = 0;
             }
+            this.maybeResumeSetlist();
+        },
+
+        maybeResumeSetlist() {
+            const lastPerfRaw = localStorage.getItem('lastPerformance');
+            let lastPerf = null;
+            if (lastPerfRaw) {
+                try { lastPerf = JSON.parse(lastPerfRaw); } catch (e) {}
+            }
+            // Only prompt if we're entering the SAME setlist as before, and it wasn't at the beginning
+            if (
+                lastPerf &&
+                lastPerf.setlistId &&
+                lastPerf.setlistId === this.performanceSetlistId &&
+                typeof lastPerf.songIndex === "number" &&
+                lastPerf.songIndex > 0 &&
+                this.performanceSongs[lastPerf.songIndex]
+            ) {
+                const resume = confirm(
+                    "Resume this setlist where we left off? (Song " +
+                    (lastPerf.songIndex + 1) +
+                    ": " +
+                    (this.performanceSongs[lastPerf.songIndex]?.title || "Unknown") +
+                    ")\n\nPress OK to resume, or Cancel to start from the beginning."
+                );
+                if (resume) {
+                    this.currentPerformanceSongIndex = lastPerf.songIndex;
+                } else {
+                    this.currentPerformanceSongIndex = 0;
+                }
+            } else {
+                this.currentPerformanceSongIndex = 0;
+            }
         },
 
         // Setup event listeners
