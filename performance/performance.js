@@ -4,7 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMode: document.getElementById('performance-mode'),
         performanceSongInfo: document.getElementById('performance-song-info'),
         lyricsDisplay: document.getElementById('lyrics-display'),
-        fontSizeSlider: document.getElementById('font-size-slider'),
+        decreaseFontBtn: document.getElementById('decrease-font-btn'),
+        increaseFontBtn: document.getElementById('increase-font-btn'),
+        fontSizeDisplay: document.getElementById('font-size-display'),
         toggleThemeBtn: document.getElementById('toggle-theme-btn'),
         exitPerformanceBtn: document.getElementById('exit-performance-btn'),
         prevSongBtn: document.getElementById('prev-song-btn'),
@@ -33,6 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
         autoscrollDelay: Number(localStorage.getItem('autoscrollDelay')) || 3,
         resizeObserver: null,
 
+        fontSize: 32, // default value; will set per song
+        perSongFontSizes: JSON.parse(localStorage.getItem('perSongFontSizes') || '{}'),
+        minFontSize: 16,
+        maxFontSize: 72,
+        fontSizeStep: 4,
+
         // Initialize
         init() {
             this.loadData();
@@ -42,15 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.setupResizeObserver();
         },
 
-        // Setup resize observer for auto-fit
+        // Setup resize observer for auto-fit (unchanged)
         setupResizeObserver() {
             if (window.ResizeObserver) {
                 this.resizeObserver = new ResizeObserver(() => {
                     if (!this.autoFitManuallyOverridden) {
-                        // Debounce the resize
                         clearTimeout(this.resizeTimeout);
                         this.resizeTimeout = setTimeout(() => {
-                            this.autoFitLyricsFont();
+                            // Optionally, you could auto-fit here if you want
                         }, 100);
                     }
                 });
@@ -94,13 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Setup event listeners
         setupEventListeners() {
-            this.fontSizeSlider.addEventListener('input', (e) => {
-                this.autoFitManuallyOverridden = true;
-                const fontSize = parseFloat(e.target.value) * 16; // rem to px
-                this.lyricsDisplay.style.fontSize = fontSize + 'px';
-                // Update scroll button visibility when font changes
-                setTimeout(() => this.updateScrollButtonsVisibility(), 100);
-            });
+            // FONT SIZE BUTTONS
+            this.decreaseFontBtn.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
+            this.increaseFontBtn.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
 
             this.toggleThemeBtn.addEventListener('click', () => this.handlePerformanceThemeToggle());
             this.exitPerformanceBtn.addEventListener('click', () => this.exitPerformanceMode());
@@ -158,22 +161,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>${song.title}</h2>
                 <div class="song-progress">${songNumber} / ${totalSongs}</div>
             `;
-            this.lyricsDisplay.textContent = lines.join('\n');
+		    
+	    this.lyricsDisplay.textContent = lines.join('\n');
 
-            // Wait for DOM to update, then auto-fit
-            requestAnimationFrame(() => {
-                const fontSize = this.autoFitLyricsFont();
-                this.fontSizeSlider.value = (fontSize / 16).toFixed(2);
-                
-                // Update button visibility after font is set
-                setTimeout(() => this.updateScrollButtonsVisibility(), 100);
-            });
+	// Restore per-song font size if present, else use last-used or default
+	    let fs = this.perSongFontSizes[song.id];
+	    if (typeof fs !== 'number') {
+	    // fallback to previous fontSize or default
+	         fs = this.fontSize || 32;
+	    }
+	    this.fontSize = fs;
+	    this.updateFontSize();
 
             this.prevSongBtn.style.display = this.currentPerformanceSongIndex > 0 ? 'block' : 'none';
             this.nextSongBtn.style.display = this.currentPerformanceSongIndex < this.performanceSongs.length - 1 ? 'block' : 'none';
             this.stopAutoScroll();
             this.updateAutoScrollButton();
             this.autoScrollBtn.blur();
+        },
+
+        // Font size methods
+	adjustFontSize(amount) {
+	    this.fontSize = Math.max(this.minFontSize, Math.min(this.maxFontSize, this.fontSize + amount));
+	    this.updateFontSize();
+	    // Save font size for this song
+	    const song = this.performanceSongs[this.currentPerformanceSongIndex];
+	    if (song && song.id) {
+		this.perSongFontSizes[song.id] = this.fontSize;
+		localStorage.setItem('perSongFontSizes', JSON.stringify(this.perSongFontSizes));
+	    }
+	},
+
+        updateFontSize() {
+            if (this.lyricsDisplay) {
+                this.lyricsDisplay.style.fontSize = this.fontSize + 'px';
+            }
+            if (this.fontSizeDisplay) {
+                this.fontSizeDisplay.textContent = `${Math.round(this.fontSize)}px`;
+            }
+            setTimeout(() => this.updateScrollButtonsVisibility(), 100);
         },
 
         // Navigate to next/previous song
@@ -202,80 +228,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 timestamp: Date.now()
             };
             localStorage.setItem('lastPerformance', JSON.stringify(perf));
-            
-            // Clean up resize observer
             if (this.resizeObserver) {
                 this.resizeObserver.disconnect();
             }
-            
             window.location.href = '../index.html#performance';
         },
 
-        // Auto-fit lyrics font - FIXED VERSION
-        autoFitLyricsFont() {
-            if (this.autoFitManuallyOverridden) {
-                return parseFloat(this.lyricsDisplay.style.fontSize) || 24;
-            }
+        // The rest: autoscroll, buttons, etc. are unchanged from your original
 
-            const container = this.lyricsDisplay;
-            const overlay = this.performanceMode;
-            
-            if (!container || !overlay) return 24;
-
-            // Get dimensions
-            const header = overlay.querySelector('.performance-header');
-            const headerHeight = header ? header.offsetHeight : 0;
-            const availableHeight = overlay.clientHeight - headerHeight;
-            const availableWidth = overlay.clientWidth;
-            
-            // Account for padding (from CSS: 0.8em top, 0.5em sides, 1.2em bottom)
-            const paddingHeight = 32; // roughly 0.8em + 1.2em at base size
-            const paddingWidth = 16; // roughly 0.5em * 2 at base size
-            
-            const targetHeight = availableHeight - paddingHeight;
-            const targetWidth = availableWidth - paddingWidth;
-
-            // Binary search for optimal font size
-            let minSize = 12;
-            let maxSize = 120;
-            let optimalSize = 24;
-
-            while (maxSize - minSize > 1) {
-                const midSize = Math.floor((minSize + maxSize) / 2);
-                container.style.fontSize = midSize + 'px';
-                
-                // Force reflow
-                container.offsetHeight;
-                
-                const fitsHeight = container.scrollHeight <= targetHeight;
-                const fitsWidth = container.scrollWidth <= targetWidth;
-                
-                if (fitsHeight && fitsWidth) {
-                    optimalSize = midSize;
-                    minSize = midSize;
-                } else {
-                    maxSize = midSize;
-                }
-            }
-
-            // Set the final size
-            container.style.fontSize = optimalSize + 'px';
-            
-            // Debug logging (remove in production)
-            console.log('Auto-fit results:', {
-                availableHeight,
-                availableWidth,
-                targetHeight,
-                targetWidth,
-                scrollHeight: container.scrollHeight,
-                scrollWidth: container.scrollWidth,
-                fontSize: optimalSize
-            });
-
-            return optimalSize;
-        },
-
-        // Auto-scroll functions
         startAutoScroll() {
             this.stopAutoScroll();
             const container = this.lyricsDisplay;
@@ -325,31 +285,26 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.title = this.autoScrollActive ? 'Pause Autoscroll' : 'Start Autoscroll';
         },
 
-        // FIXED: Combined scroll button visibility logic
         updateScrollButtonsVisibility() {
             const container = this.lyricsDisplay;
             if (!container) return;
-            
             const needsScroll = container.scrollHeight > container.clientHeight;
             const hasScrolled = container.scrollTop > 2;
-            
-            // Show/hide scroll to top button
+
             if (hasScrolled) {
                 this.scrollToTopBtn.classList.remove('invisible');
             } else {
                 this.scrollToTopBtn.classList.add('invisible');
             }
-            
-            // Show/hide auto-scroll button based on whether scrolling is needed
+
             if (needsScroll) {
                 this.autoScrollBtn.style.display = 'flex';
             } else {
                 this.autoScrollBtn.style.display = 'none';
-                this.stopAutoScroll(); // Stop auto-scroll if no longer needed
+                this.stopAutoScroll();
             }
         },
 
-        // Legacy method name for compatibility
         updateScrollBtnVisibility() {
             this.updateScrollButtonsVisibility();
         }
@@ -357,3 +312,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     app.init();
 });
+
