@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         perSongFontSizes: JSON.parse(localStorage.getItem('perSongFontSizes') || '{}'),
         minFontSize: 16,
         maxFontSize: 72,
-        fontSizeStep: 4,
+        fontSizeStep: 1,
 
         // Initialize
         init() {

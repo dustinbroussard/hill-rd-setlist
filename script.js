@@ -436,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.setlistSelect && this.performanceSetlistSelect) {
                 this.renderSetlists();
             }
-            this.checkResumePerformance();
+           
         },
 
         // Data Management
@@ -907,29 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = `performance/performance.html?${params.toString()}`;
         },
 
-        checkResumePerformance() {
-            const lastPerfRaw = localStorage.getItem('lastPerformance');
-            let lastPerf = null;
-            if (lastPerfRaw) {
-                try { lastPerf = JSON.parse(lastPerfRaw); } catch (e) {}
-            }
-            if (lastPerf && window.location.hash.includes('performance')) {
-                setTimeout(() => {
-                    if (confirm("Resume last performance?\n(Setlist: " + 
-                        (lastPerf.setlistId ? (SetlistsManager.getSetlistById(lastPerf.setlistId)?.name || "Unknown Setlist") : "All Songs") + 
-                        ", Song #" + (lastPerf.songIndex + 1) + ")")) {
-                        const songId = lastPerf.setlistId
-                            ? SetlistsManager.getSetlistById(lastPerf.setlistId).songs[lastPerf.songIndex]
-                            : this.songs[lastPerf.songIndex]?.id;
-                        if (songId) {
-                            this.startPerformanceWithSong(songId);
-                        }
-                    }
-                }, 350);
-            }
-        },
-
-        // Helper for downloading a file
+ // Helper for downloading a file
         downloadFile(filename, content, mime = "text/plain") {
             const blob = new Blob([content], { type: mime });
             const link = document.createElement("a");
