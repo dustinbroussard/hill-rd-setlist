@@ -8,33 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         document.body.dataset.theme = savedTheme;
     }
-    updateThemeToggleIcon();
-
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', function() {
-            const current = document.body.dataset.theme;
-            const next = current === 'default-dark' ? 'default-light' : 'default-dark';
-            document.body.dataset.theme = next;
-            localStorage.setItem('theme', next);
-            updateThemeToggleIcon();
-        });
-    }
-
-    function updateThemeToggleIcon() {
-        const icon = document.getElementById('theme-toggle-icon');
-        const theme = document.body.dataset.theme;
-        if (!icon) return;
-        if (theme === 'default-dark') {
-            icon.className = 'fas fa-sun';
-            icon.style.color = '#fff';
-            icon.style.background = 'transparent';
-        } else {
-            icon.className = 'fas fa-moon';
-            icon.style.color = '#000';
-            icon.style.background = 'transparent';
-        }
-    }
 });
 
 // ==== SETLIST MANAGER MODULE 
@@ -556,21 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.availableSongsContainer.addEventListener('click', (e) => this.handleAvailableSongsClick(e));
             this.currentSetlistSongsContainer.addEventListener('click', (e) => this.handleCurrentSetlistSongsClick(e));
             this.performanceSongList.addEventListener('click', (e) => this.handlePerformanceSongClick(e));
-            document.getElementById('theme-icon-btn')?.addEventListener('click', () => {
-                document.getElementById('theme-modal').style.display = 'block';
-            });
-            document.getElementById('close-theme-modal')?.addEventListener('click', () => {
-                document.getElementById('theme-modal').style.display = 'none';
-            });
-            document.querySelectorAll('.theme-btn')?.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const theme = btn.getAttribute('data-theme');
-                    document.body.dataset.theme = theme;
-                    localStorage.setItem('theme', theme);
-                    document.getElementById('theme-modal').style.display = 'none';
-                });
-            });
-
             // Add theme toggle button handler
             document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
                 const currentTheme = document.body.dataset.theme;
@@ -578,7 +536,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
                 document.body.dataset.theme = newTheme;
                 localStorage.setItem('theme', newTheme);
-                this.updateThemeToggleIcon();
             });
         },
 
