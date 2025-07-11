@@ -1,9 +1,13 @@
 // ==== THEME HANDLING ====
 document.addEventListener('DOMContentLoaded', function() {
-    if (!localStorage.getItem('theme')) {
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme');
+    if (!savedTheme) {
         localStorage.setItem('theme', 'default-dark');
+        document.body.dataset.theme = 'default-dark';
+    } else {
+        document.body.dataset.theme = savedTheme;
     }
-    document.body.dataset.theme = localStorage.getItem('theme');
     updateThemeToggleIcon();
 
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -570,7 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add theme toggle button handler
             document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
                 const currentTheme = document.body.dataset.theme;
-                const newTheme = currentTheme === 'default-dark' ? 'default-light' : 'default-dark';
+                const isDark = currentTheme.includes('dark');
+                const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
                 document.body.dataset.theme = newTheme;
                 localStorage.setItem('theme', newTheme);
                 this.updateThemeToggleIcon();
