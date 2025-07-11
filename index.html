@@ -24,8 +24,8 @@
     <div class="app-logo">
   <img src="assets/images/mylogo.png" alt="App Logo" class="app-logo-img">
 </div>
-    <button id="theme-icon-btn" class="theme-icon-btn" title="Change Theme">
-  <i class="fas fa-palette"></i>
+  <button id="theme-toggle-btn" class="icon-btn"" title="Toggle Light/Dark" style="position:absolute;top:1.1rem;right:1.1rem;">
+  <i class="fas fa-adjust"></i>
 </button>
     <div id="theme-modal" class="modal">
   <div class="modal-content">
@@ -55,11 +55,9 @@
   </nav>
 <div id="tab-toolbar" class="toolbar"></div>
 </header>
-
     <main id="app">
         <section id="songs" class="tab active">
             <div class="page-content songs-page">
-                
                 <div id="song-list" class="song-list"></div>
             </div>
         </section>
@@ -67,7 +65,6 @@
         <section id="setlists" class="tab">
             <div class="page-content setlists-page">
                     
-                </div>
                 <div class="setlist-editor">
                     <div class="column">
                         <h3>Available Songs</h3>
@@ -87,7 +84,6 @@
             </div>
         </section>
     </main>
-</button>
     <div id="song-modal" class="modal">
         <div class="modal-content">
             <h2 id="song-modal-title">Add Song</h2>

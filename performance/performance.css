@@ -67,7 +67,7 @@
     opacity: 1;
 }
 
-.performance-controls .icon-btn.d railwaysg,
+.performance-controls .icon-btn.danger,
 .performance-controls .icon-btn[title*="Exit"] {
     background: var(--danger, #ef4444);
     color: #fff;

@@ -1,9 +1,9 @@
 {
-    "name": "HIll Rd. Setlist Manager",
+    "name": "Hill Rd. Setlist Manager",
     "short_name": "SetlistMgr",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#121212",
+    "background_color": "#FFF3EO",
     "theme_color": "#00bcd4",
     "description": "A performance-focused lyric and setlist manager.",
     "icons": [

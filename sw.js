@@ -5,12 +5,12 @@ const urlsToCache = [
     '/style.css',
     '/script.js',
     '/manifest.json',
-    '/lyricsManager.js',
     '/assets/icons/icon-192x192.png',
     '/assets/icons/icon-512x512.png',
+    'lib/mammoth.browser.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.min.js'
+    'https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js'
 ];
 
 self.addEventListener('install', event => {

@@ -276,97 +276,11 @@ img, video, iframe {
 .header-top {
     display: flex;
     align-items: center;
-    width: 75%;
+    width: 100%;
     justify-content: space-between;
     padding: 0.29rem 1.2rem 0.11rem 1.27rem;
     gap: 1.2rem;
 }
-
-.app-logo-text {
-    font-family: "Neonderthaw", cursive;
-    font-weight: 600;
-    font-size: 2rem;
-    letter-spacing: 0.13em;
-    color: var(--text-primary) !important;
-    text-shadow:
-        0 0 4px var(--accent-primary, #888),
-        0 0 6px var(--accent-glow, #bbb);
-    filter: brightness(1.07) contrast(1.08);
-    line-height: 1.11;
-    white-space: nowrap;
-    opacity: 0.97;
-    margin: 0.5em auto 0.5em auto; /* Centering and adjusting vertical margin */
-    text-align: center;
-    transition: color 0.33s, text-shadow 0.33s, filter 0.33s;
-    margin-top: 1.1em;   /* Space above logo */
-    margin-bottom: 0.7em; /* Space below logo (before tabs/nav) */
-}
-
-/* Heavy glow & flicker ONLY on dark themes */
-[data-theme="default-dark"] .app-logo-text,
-[data-theme="amoled-dark"] .app-logo-text,
-[data-theme="blue-dark"] .app-logo-text,
-[data-theme="red-dark"] .app-logo-text {
-    text-shadow:
-        0 0 13px var(--text-primary, #fff),
-        0 0 24px var(--accent-primary, #fff),
-        0 0 44px var(--accent-glow, #0ff),
-        0 0 12px var(--accent-primary, #fff);
-    filter: brightness(1.13) contrast(1.13);
-    opacity: 1;
-    animation: neon-flicker-sync 4.8s infinite alternate;
-}
-
-/* Minimal glow, NO flicker on light themes */
-[data-theme="default-light"] .app-logo-text,
-[data-theme="blue-light"] .app-logo-text,
-[data-theme="red-light"] .app-logo-text {
-    text-shadow:
-        0 0 1.5px var(--accent-primary, #222);
-    filter: brightness(1.0) contrast(1.04);
-    opacity: 1;
-    animation: none;
-}
-
-.app-logo-text::after {
-    content: "";
-    display: block;
-    width: 93%;
-    height: 2px;
-    margin: 0.13em auto 0 auto;
-    background: var(--accent-primary);
-    filter: blur(7px) brightness(0.80) opacity(0.12);
-    border-radius: 8px;
-    opacity: 0.07;
-    pointer-events: none;
-    transition: opacity 0.33s;
-}
-
-/* Updated, more subtle flicker */
-@keyframes neon-flicker-sync {
-  0% {
-    text-shadow:
-      0 0 8px var(--text-primary, #fff),
-      0 0 18px var(--accent-primary, #fff),
-      0 0 28px var(--accent-glow, #0ff),
-      0 0 32px var(--accent-glow, #0ff);
-    opacity: 0.94;
-    filter: brightness(1.06);
-  }
-  78% {
-    text-shadow:
-      0 0 13px var(--text-primary, #fff),
-      0 0 26px var(--accent-primary, #fff),
-      0 0 35px var(--accent-glow, #0ff);
-    opacity: 1;
-    filter: brightness(1.12);
-  }
-  87% { opacity: 0.83; filter: brightness(0.95);}
-  92% { opacity: 0.55; filter: brightness(0.89);}
-  94% { opacity: 1; filter: brightness(1.09);}
-  100% { opacity: 1; filter: brightness(1.10);}
-}
-
 
 .theme-toggle-wrapper {
     min-width: 120px;
@@ -428,6 +342,7 @@ img, video, iframe {
     padding: 0.29rem 0 0.03rem 0;
     background: none;
     box-shadow: none;
+    margin-bottom: 1em;
     border: none;
 }
 
@@ -484,7 +399,7 @@ img, video, iframe {
   background: none;
   border: none;
   color: var(--accent-secondary, #888);
-  font-size: 1.45rem;
+  font-size: 1.rem;
   cursor: pointer;
   opacity: 0.82;
   z-index: 100;
@@ -502,8 +417,11 @@ img, video, iframe {
         padding: 0 0 0.5rem 0;
     }
     .header-top {
-        flex-direction: row;
-        padding: 0.7rem 0.7rem 0.4rem 0.7rem;
+	flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     .app-title {
         font-size: 1.08rem;
@@ -537,7 +455,6 @@ img, video, iframe {
     .app-logo-text {
         font-size: 1.8rem; /* Slightly smaller logo on tablets */
     }
-
     .app-nav {
         gap: 1.5rem; /* Reduced gap for nav buttons */
     }
@@ -1244,7 +1161,7 @@ img, video, iframe {
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .setlist-select {
@@ -1791,5 +1708,181 @@ img, video, iframe {
   .main-logo-img {
       max-height: 38px;
   }
+}
+
+@media (max-width: 800px) {
+  .header-top {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+/* Ensure tab content also stretches to fill, if necessary */
+.tab.active {
+    display: flex; /* Change from block to flex to ensure content stretches */
+    flex-direction: column;
+    flex-grow: 1; /* Allow active tab to grow and fill space */
+}
+
+.page-content {
+    flex-grow: 1; /* Allow page content to grow */
+    display: flex;
+    flex-direction: column;
+    /* Ensure padding doesn't cause overflow */
+    box-sizing: border-box;
+    padding: var(--padding-base); /* Keep your padding */
+}
+
+/* ========================================
+    Media Queries (Corrected)
+    ======================================== */
+
+/* Tablet and Phone Adjustments (max-width: 800px) */
+@media (max-width: 800px) {
+    .app-header {
+        padding: 0 0 0.5rem 0;
+    }
+    
+    /* === LOGO CENTERING FIX === */
+    /* We must set .header-top to 100% width on mobile/tablet 
+       to allow the logo to center correctly across the full screen. 
+       The existing 70% rule was the root cause. */
+    .header-top {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100% !important; 
+        padding: 0 !important;
+    }
+
+    .app-title {
+        font-size: 1.08rem;
+        padding-left: 0.2rem;
+    }
+    /* ... (rest of the existing 800px media query styles) ... */
+    
+    /* Remove any redundant @media (max-width: 800px) block that might be at the end of the file */
+}
+
+
+/* === BACKGROUND VOID FIX === */
+/* Ensure the main content containers fill the available height */
+.tab.active {
+    /* Change display from 'block' to 'flex' and allow it to stretch */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; 
+}
+
+.page-content {
+    /* Ensure the page content also fills its container */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--padding-base); 
+}
+
+html, body {
+  height: 100%;
+  min-height: 100vh;
+  background: var(--bg-primary, #000) !important;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.main-box { /* Add this new rule for .main-box */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure it's at least viewport height */
+    flex-grow: 1; /* Allow it to grow and fill space */
+}
+
+main { /* Add this new rule for main */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Allow main content area to grow */
+}
+
+.tab.active {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.page-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--padding-base);
+}
+html, body {
+  height: 100%;
+  min-height: 100vh;
+  background: var(--bg-primary, #000) !important;
+}
+
+#bg-filler {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-primary, #000); /* Or use any color you want */
+  z-index: 0;
+  pointer-events: none;
+}
+
+.main-box {
+  position: relative;
+  z-index: 1;
+}
+html, body {
+  background: var(--bg-primary, #000) !important;
+  min-height: 100vh;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--accent-secondary, #888);
+  font-size: 1.45rem;
+  cursor: pointer;
+  opacity: 0.82;
+  z-index: 100;
+  transition: color 0.22s, opacity 0.14s;
+}
+.theme-toggle-btn:hover, .theme-toggle-btn:focus {
+  color: var(--accent-primary, #fff);
+  opacity: 1;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.45rem;
+  cursor: pointer;
+  padding: 0.2em;
+  border-radius: 50%;
+  transition: background 0.22s, color 0.14s, opacity 0.14s;
+}
+
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--accent-secondary, #aaa);
+  font-size: 1.2em;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: color 0.22s, opacity 0.15s;
+}
+.icon-btn:hover, .icon-btn:focus {
+  color: var(--accent-primary, #fff);
+  opacity: 1;
 }
 
