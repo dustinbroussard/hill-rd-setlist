@@ -276,7 +276,7 @@ img, video, iframe {
 .header-top {
     display: flex;
     align-items: center;
-    width: 50%;
+    width: 75%;
     justify-content: space-between;
     padding: 0.29rem 1.2rem 0.11rem 1.27rem;
     gap: 1.2rem;
