@@ -436,7 +436,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.setlistSelect && this.performanceSetlistSelect) {
                 this.renderSetlists();
             }
-           
+
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme');
+            const defaultTheme = 'default-dark';
+            document.body.dataset.theme = savedTheme || defaultTheme;
+            if (!savedTheme) {
+                localStorage.setItem('theme', defaultTheme);
+            }
         },
 
         // Data Management
@@ -529,6 +536,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('theme', theme);
                     document.getElementById('theme-modal').style.display = 'none';
                 });
+            });
+
+            // Add theme toggle button handler
+            document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
+                const currentTheme = document.body.dataset.theme;
+                const newTheme = currentTheme === 'default-dark' ? 'default-light' : 'default-dark';
+                document.body.dataset.theme = newTheme;
+                localStorage.setItem('theme', newTheme);
             });
         },
 
