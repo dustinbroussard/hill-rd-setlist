@@ -444,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!savedTheme) {
                 localStorage.setItem('theme', defaultTheme);
             }
+            this.updateThemeToggleIcon();
         },
 
         // Data Management
@@ -501,6 +502,25 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // Event Listeners
+        updateThemeToggleIcon() {
+            const icon = document.getElementById('theme-toggle-icon');
+            const theme = document.body.dataset.theme;
+            if (!icon) return;
+            if (theme === 'default-dark') {
+                icon.className = 'fas fa-sun';
+                icon.style.color = '#fff';
+                icon.style.background = '#000';
+                icon.style.borderRadius = '50%';
+                icon.style.padding = '0.25em';
+            } else {
+                icon.className = 'fas fa-moon';
+                icon.style.color = '#000';
+                icon.style.background = '#fff';
+                icon.style.borderRadius = '50%';
+                icon.style.padding = '0.25em';
+            }
+        },
+
         setupEventListeners() {
             this.navButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -544,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newTheme = currentTheme === 'default-dark' ? 'default-light' : 'default-dark';
                 document.body.dataset.theme = newTheme;
                 localStorage.setItem('theme', newTheme);
+                this.updateThemeToggleIcon();
             });
         },
 
