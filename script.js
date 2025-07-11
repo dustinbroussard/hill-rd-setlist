@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         let ext = format === "csv" ? "csv" : format === "txt" ? "txt" : "json";
                         const setlist = SetlistsManager.getSetlistById(this.currentSetlistId);
                         const name = setlist ? setlist.name.replace(/\s+/g, "_") : "setlist";
-                        downloadFile(`${name}.${ext}`, content,
+                        this.downloadFile(`${name}.${ext}`, content,
                             ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : "text/plain"
                         );
                     } else {
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             this.saveData();
             this.renderSongs();
-            this.closeSetlistModal();
+            this.closeSonglistModal();
         },
 
         deleteSong(id) {
