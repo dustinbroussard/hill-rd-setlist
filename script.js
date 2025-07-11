@@ -1,3 +1,38 @@
+// ==== THEME HANDLING ====
+document.addEventListener('DOMContentLoaded', function() {
+    if (!localStorage.getItem('theme')) {
+        localStorage.setItem('theme', 'default-dark');
+    }
+    document.body.dataset.theme = localStorage.getItem('theme');
+    updateThemeToggleIcon();
+
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function() {
+            const current = document.body.dataset.theme;
+            const next = current === 'default-dark' ? 'default-light' : 'default-dark';
+            document.body.dataset.theme = next;
+            localStorage.setItem('theme', next);
+            updateThemeToggleIcon();
+        });
+    }
+
+    function updateThemeToggleIcon() {
+        const icon = document.getElementById('theme-toggle-icon');
+        const theme = document.body.dataset.theme;
+        if (!icon) return;
+        if (theme === 'default-dark') {
+            icon.className = 'fas fa-sun';
+            icon.style.color = '#fff';
+            icon.style.background = 'transparent';
+        } else {
+            icon.className = 'fas fa-moon';
+            icon.style.color = '#000';
+            icon.style.background = 'transparent';
+        }
+    }
+});
+
 // ==== SETLIST MANAGER MODULE 
 function normalizeSetlistName(name) {
     return name.replace(/\.[^/.]+$/, '')  // Remove file extension
@@ -437,14 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.renderSetlists();
             }
 
-            // Initialize theme
-            const savedTheme = localStorage.getItem('theme');
-            const defaultTheme = 'default-dark';
-            document.body.dataset.theme = savedTheme || defaultTheme;
-            if (!savedTheme) {
-                localStorage.setItem('theme', defaultTheme);
-            }
-            this.updateThemeToggleIcon();
         },
 
         // Data Management
@@ -502,24 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // Event Listeners
-        updateThemeToggleIcon() {
-            const icon = document.getElementById('theme-toggle-icon');
-            const theme = document.body.dataset.theme;
-            if (!icon) return;
-            if (theme === 'default-dark') {
-                icon.className = 'fas fa-sun';
-                icon.style.color = '#fff';
-                icon.style.background = '#000';
-                icon.style.borderRadius = '50%';
-                icon.style.padding = '0.25em';
-            } else {
-                icon.className = 'fas fa-moon';
-                icon.style.color = '#000';
-                icon.style.background = '#fff';
-                icon.style.borderRadius = '50%';
-                icon.style.padding = '0.25em';
-            }
-        },
 
         setupEventListeners() {
             this.navButtons.forEach(btn => {
