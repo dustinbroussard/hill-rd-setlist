@@ -169,7 +169,7 @@ const SetlistsManager = (() => {
 
     // Split text into lines and clean up
     const titles = text.split('\n')
-        .map(line => line.trim())
+        .map(line => line.trim().replace(/^\d+[\).\:\-]?\s*/, ''))  // Strip "1.", "2)", etc.
         .filter(line => line.length > 0);
 
     const songIds = [];
