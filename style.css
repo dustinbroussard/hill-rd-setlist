@@ -1064,6 +1064,12 @@ img, video, iframe {
         justify-content: space-between;
         margin-top: 0.5rem;
     }
+
+    .toolbar-buttons-group > .btn,
+    .toolbar-buttons-group > label.btn {
+        flex: 1 1 0;
+        text-align: center;
+    }
     
     .song-container .song-item .song-controls {
         flex-direction: column;
@@ -1071,8 +1077,9 @@ img, video, iframe {
     }
     
     .song-container .song-item .song-controls .btn {
-        width: 28px;
-        height: 28px;
+        width: 2.2em;
+        height: 2.2em;
+        font-size: 0.85rem;
     }
 }
 
@@ -1768,7 +1775,7 @@ html, body {
   .song-item,
   .setlist-song-item {
     padding: 0.45rem 0.55rem !important;
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
   }
 
   .song-title,
@@ -1837,7 +1844,7 @@ html, body {
 
   .song-item,
   .setlist-song-item {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     padding: 0.4rem 0.6rem;
   }
 

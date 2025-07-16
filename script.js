@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme');
     if (!savedTheme) {
         localStorage.setItem('theme', 'default-dark');
-        document.body.dataset.theme = 'default-dark';
+        document.documentElement.dataset.theme = 'default-dark';
     } else {
-        document.body.dataset.theme = savedTheme;
+        document.documentElement.dataset.theme = savedTheme;
     }
 });
 
@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData() {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'default-dark';
-            document.body.dataset.theme = theme;
+            document.documentElement.dataset.theme = theme;
         },
 
         saveData() {
@@ -535,10 +535,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.performanceSongList.addEventListener('click', (e) => this.handlePerformanceSongClick(e));
             // Add theme toggle button handler
             document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
-                const currentTheme = document.body.dataset.theme;
+                const currentTheme = document.documentElement.dataset.theme;
                 const isDark = currentTheme.includes('dark');
                 const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
-                document.body.dataset.theme = newTheme;
+                document.documentElement.dataset.theme = newTheme;
                 localStorage.setItem('theme', newTheme);
             });
         },
