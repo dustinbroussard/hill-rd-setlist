@@ -268,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // DOM Elements
-        themeSelect: document.getElementById('theme-select'),
         navButtons: document.querySelectorAll('.nav-button'),
         tabs: document.querySelectorAll('.tab'),
         songList: document.getElementById('song-list'),
