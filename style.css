@@ -607,6 +607,14 @@ img, video, iframe {
     align-items: center;
 }
 
+/* Group wrapper for toolbar buttons */
+.toolbar-buttons-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
 .search-input, .setlist-select {
     flex-grow: 1;
     padding: 0.5rem;
@@ -1039,13 +1047,22 @@ img, video, iframe {
     }
     
     .toolbar {
-        flex-direction: row
+        flex-direction: column;
         align-items: stretch;
     }
-    
+
     .toolbar .setlist-select {
         min-width: none;
         max-width: none;
+        width: 100%;
+    }
+
+    .toolbar-buttons-group {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin-top: 0.5rem;
     }
     
     .song-container .song-item .song-controls {
@@ -1735,10 +1752,10 @@ html, body {
   .btn,
   .icon-btn,
   .perform-song-btn {
-    font-size: 0.78rem !important;
-    padding: 0.35rem 0.55rem !important;
-    min-width: 2.3em !important;
-    min-height: 2.3em !important;
+    font-size: 0.75rem !important;
+    padding: 0.32rem 0.5rem !important;
+    min-width: 2.2em !important;
+    min-height: 2.2em !important;
   }
 
   .setlist-actions .btn {
@@ -1750,8 +1767,8 @@ html, body {
   /* Song items */
   .song-item,
   .setlist-song-item {
-    padding: 0.5rem 0.6rem !important;
-    font-size: 0.93rem !important;
+    padding: 0.45rem 0.55rem !important;
+    font-size: 0.9rem !important;
   }
 
   .song-title,
@@ -1767,14 +1784,14 @@ html, body {
 
   /* Nav and select/input elements */
   .app-nav .nav-button {
-    font-size: 0.85rem !important;
-    padding: 0.35rem 0.6rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.32rem 0.55rem !important;
   }
 
   .setlist-select,
   .search-input {
-    font-size: 0.83rem !important;
-    padding: 0.4rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.35rem !important;
   }
   
   /* Modal */
@@ -1853,14 +1870,14 @@ html, body {
 
   .search-input,
   .setlist-select {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     width: 100%;
-    padding: 0.4rem;
+    padding: 0.35rem;
   }
 
   .nav-button {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.6rem;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.55rem;
   }
 }
 

@@ -311,12 +311,14 @@ document.addEventListener('DOMContentLoaded', () => {
             `,
             setlists: `
                 <select id="setlist-select" class="setlist-select"></select>
-                <button id="new-setlist-btn" class="btn" title="New Setlist"><i class="fas fa-plus"></i></button>
-                <button id="rename-setlist-btn" class="btn" title="Rename"><i class="fas fa-pen"></i></button>
-                <button id="duplicate-setlist-btn" class="btn" title="Duplicate"><i class="fas fa-copy"></i></button>
-                <button id="delete-setlist-btn" class="btn danger" title="Delete"><i class="fas fa-trash"></i></button>
-                <button id="import-setlist-btn" class="btn" title="Import"><i class="fas fa-file-import"></i></button>
-                <button id="export-setlist-btn" class="btn" title="Export"><i class="fas fa-file-export"></i></button>
+                <div class="toolbar-buttons-group">
+                    <button id="new-setlist-btn" class="btn" title="New Setlist"><i class="fas fa-plus"></i></button>
+                    <button id="rename-setlist-btn" class="btn" title="Rename"><i class="fas fa-pen"></i></button>
+                    <button id="duplicate-setlist-btn" class="btn" title="Duplicate"><i class="fas fa-copy"></i></button>
+                    <button id="delete-setlist-btn" class="btn danger" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button id="import-setlist-btn" class="btn" title="Import"><i class="fas fa-file-import"></i></button>
+                    <button id="export-setlist-btn" class="btn" title="Export"><i class="fas fa-file-export"></i></button>
+                </div>
                 <input type="file" id="import-setlist-file" accept=".txt,.docx" class="hidden-file">
             `,
             performance: `
