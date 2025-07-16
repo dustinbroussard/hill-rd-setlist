@@ -304,9 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tabToolbars: {
             songs: `
                 <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
-                <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i></button>
-                <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i></button>
-                <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i></label>
+                <div class="toolbar-buttons-group">
+                    <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i></button>
+                    <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i></button>
+                    <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i></label>
+                </div>
                 <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
             `,
             setlists: `
