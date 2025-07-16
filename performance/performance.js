@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData() {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'default-dark';
-            document.body.dataset.theme = theme;
+            document.documentElement.dataset.theme = theme;
         },
 
         // Load performance state from query parameters
@@ -246,10 +246,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Toggle theme
         handlePerformanceThemeToggle() {
-            const currentTheme = document.body.dataset.theme;
+            const currentTheme = document.documentElement.dataset.theme;
             const isDark = currentTheme.includes('dark');
             const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
-            document.body.dataset.theme = newTheme;
+            document.documentElement.dataset.theme = newTheme;
             localStorage.setItem('theme', newTheme);
         },
 
