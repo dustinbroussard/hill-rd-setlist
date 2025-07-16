@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         decreaseFontBtn: document.getElementById('decrease-font-btn'),
         increaseFontBtn: document.getElementById('increase-font-btn'),
         fontSizeDisplay: document.getElementById('font-size-display'),
-        toggleThemeBtn: document.getElementById('toggle-theme-btn'),
+        toggleThemeBtn: document.getElementById('theme-toggle-btn'),
         exitPerformanceBtn: document.getElementById('exit-performance-btn'),
         prevSongBtn: document.getElementById('prev-song-btn'),
         nextSongBtn: document.getElementById('next-song-btn'),
