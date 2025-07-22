@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
     const savedTheme = localStorage.getItem('theme');
     if (!savedTheme) {
-        localStorage.setItem('theme', 'default-dark');
-        document.documentElement.dataset.theme = 'default-dark';
+        localStorage.setItem('theme', 'dark');
+        document.documentElement.dataset.theme = 'dark';
     } else {
         document.documentElement.dataset.theme = savedTheme;
     }
@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Data Management
         loadData() {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
-            const theme = localStorage.getItem('theme') || 'default-dark';
+            const theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.dataset.theme = theme;
         },
 
