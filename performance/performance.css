@@ -258,16 +258,16 @@
     .scroll-to-top-btn,
     .auto-scroll-btn {
       position: fixed;
-      right: 2.7em;
+      right: 1.3rem;
       z-index: 2020;
-      width: 30px;
-      height: 30px;
+      width: 37px;
+      height: 37px;
       border-radius: 50%;
       background: var(--accent-primary, #00bcd4);
       color: var(--bg-primary, #111);
       border: none;
       box-shadow: 0 2px 12px rgba(0,0,0,0.23);
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       display: none;
       align-items: center;
       justify-content: center;
@@ -275,12 +275,12 @@
       transition: background 0.22s, opacity 0.14s, color 0.14s;
     }
     .scroll-to-top-btn {
-      bottom: 90px;
+      bottom: 100px;
     } 
 
     .auto-scroll-btn {
       bottom: 52px;
       display: flex;
-}
+    }
 
 }

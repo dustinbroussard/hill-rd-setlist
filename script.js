@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.songList.innerHTML = filteredSongs.map(song => `
                 <div class="song-item" data-id="${song.id}">
                     <span>${song.title}</span>
-                    <div>
+                    <div class="song-actions">
                         <button class="btn edit-song-btn"><i class="fas fa-pen"></i></button>
                         <button class="btn danger delete-song-btn"><i class="fas fa-trash"></i></button>
                     </div>
