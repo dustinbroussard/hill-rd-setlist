@@ -100,7 +100,7 @@
     white-space: pre-line;
     padding: 0.8em 0.5em 1.2em 0.5em;
     text-align: center;
-    max-width: 900px;
+    max-width: 100%;
     margin: 0 auto;
     color: var(--text-primary);
     transition: color var(--transition-speed);
@@ -251,4 +251,36 @@
 
 .performance-header label[for="font-size-slider"] {
     display: none;
+}
+
+/* Mobile-First Responsive Styles */
+@media (max-width: 600px) {
+    .scroll-to-top-btn,
+    .auto-scroll-btn {
+      position: fixed;
+      right: 2.7em;
+      z-index: 2020;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--accent-primary, #00bcd4);
+      color: var(--bg-primary, #111);
+      border: none;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.23);
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.93;
+      transition: background 0.22s, opacity 0.14s, color 0.14s;
+    }
+    .scroll-to-top-btn {
+      bottom: 90px;
+    } 
+
+    .auto-scroll-btn {
+      bottom: 52px;
+      display: flex;
+}
+
 }
