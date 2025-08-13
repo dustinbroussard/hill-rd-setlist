@@ -3,8 +3,8 @@
     "short_name": "SetlistMgr",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFF3EO",
-    "theme_color": "#00bcd4",
+    "background_color": "#000000",
+    "theme_color": "#000000",
     "description": "A performance-focused lyric and setlist manager.",
     "icons": [
         {
