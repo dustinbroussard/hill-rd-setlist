@@ -207,7 +207,9 @@
     color: var(--accent-primary, #fff);
 }
 
-#autoscroll-delay-modal {
+#autoscroll-delay-modal,
+#performance-menu-modal,
+#perf-metadata-modal {
     z-index: 20000;
     display: none;
     position: fixed;
@@ -216,15 +218,19 @@
     width: 100vw;
     height: 100vh;
     background: rgba(0,0,0,0.82);
-   -cast-align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
-#autoscroll-delay-modal[style*="display: block"] {
+#autoscroll-delay-modal.is-open,
+#performance-menu-modal.is-open,
+#perf-metadata-modal.is-open {
     display: flex;
 }
 
-#autoscroll-delay-modal .modal-content {
+#autoscroll-delay-modal .modal-content,
+#performance-menu-modal .modal-content,
+#perf-metadata-modal .modal-content {
     position: relative;
     z-index: 20001;
     background: var(--bg-primary, #222);
