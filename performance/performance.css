@@ -282,5 +282,10 @@
       bottom: 52px;
       display: flex;
     }
-
+    
+    .performance-controls .icon-btn {
+    width: 2em;
+    height: 2em;
+    font-size: 1rem;
+   }
 }

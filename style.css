@@ -1454,20 +1454,8 @@ img, video, iframe {
   z-index: 2;
   font-size: 1.04em;
   transition: background 0.18s, color 0.18s, transform 0.14s;
-  
-  
-.main-logo-img {
-    display: block;
-    max-width: 95vw;
-    max-height: 110px;
-    margin: 0.7em auto 0.6em auto;
-    border-radius: 11px;
-    box-shadow: 0 4px 24px 1px rgba(0,0,0,0.27), 0 0 13px 1px var(--accent-glow, #fff4);
-    background: transparent;
-    filter: drop-shadow(0 0 8px var(--accent-glow, #fff6)) brightness(1.06) contrast(1.04);
-    transition: filter 0.28s, box-shadow 0.22s;
 }
-
+ 
 
 
 /* For smaller screens, go even smaller */
@@ -1530,6 +1518,8 @@ img, video, iframe {
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
         width: 100% !important; 
         padding: 0 !important;
     }
@@ -1626,7 +1616,7 @@ html, body {
   background: none;
   border: none;
   color: var(--accent-secondary, #888);
-  font-size: 1.45rem;
+  font-size: 1rem;
   cursor: pointer;
   opacity: 0.82;
   z-index: 100;
