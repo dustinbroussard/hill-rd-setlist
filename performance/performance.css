@@ -289,3 +289,31 @@
     font-size: 1rem;
    }
 }
+
+.modal-content .modal-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.modal-content .modal-row > label { min-width: 9em; }
+.modal-content select, .modal-content input, .modal-content textarea {
+  width: 100%;
+  background: var(--bg-tertiary); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.5rem;
+}
+.metadata-row { display: flex; gap: 0.6rem; align-items: center; margin: 0.4rem 0; }
+.metadata-row > label { min-width: 9em; }
+.meta-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 0.8rem; }
+
+/* Compact metadata line under title */
+.performance-header .song-meta-line {
+  font-size: 0.95em; color: var(--accent-secondary, #aaa); margin-top: 0.15em;
+  letter-spacing: 0.02em;
+}
+.performance-header .song-meta-line .notes-icon {
+  margin-left: 0.4em; cursor: pointer; opacity: 0.85;
+}
+.performance-header .song-meta-line .notes-icon:hover { opacity: 1; }
+
+.lyrics-line-group { margin-bottom: 0.35em; }
+.chord-line { white-space: pre; font-size: 0.85em; color: var(--accent-secondary, #ccc); }
+.section-label { margin-top: 0.6em; font-weight: bold; }
