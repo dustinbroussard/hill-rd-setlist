@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fontSize: 32, // default value; will set per song
         perSongFontSizes: JSON.parse(localStorage.getItem('perSongFontSizes') || '{}'),
+        perSongAutoScroll: JSON.parse(localStorage.getItem('perSongAutoScroll') || '{}'),
         minFontSize: 16,
         maxFontSize: 72,
         fontSizeStep: 1,
@@ -235,6 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('autoscrollDelay', this.autoscrollDelay);
                 this.autoScrollSpeed = Number(this.autoscrollSpeedSlider.value);
                 localStorage.setItem('autoscrollSpeed', this.autoScrollSpeed);
+                const song = this.performanceSongs[this.currentPerformanceSongIndex];
+                if (song && song.id) {
+                    const settings = this.perSongAutoScroll[song.id] || {};
+                    settings.delay = this.autoscrollDelay;
+                    settings.speed = this.autoScrollSpeed;
+                    settings.active = this.autoScrollActive;
+                    this.perSongAutoScroll[song.id] = settings;
+                    localStorage.setItem('perSongAutoScroll', JSON.stringify(this.perSongAutoScroll));
+                }
                 this.autoscrollDelayModal.classList.remove('is-open');
             });
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
@@ -322,7 +332,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.prevSongBtn.style.display = this.currentPerformanceSongIndex > 0 ? 'block' : 'none';
             this.nextSongBtn.style.display = this.currentPerformanceSongIndex < this.performanceSongs.length - 1 ? 'block' : 'none';
-            this.stopAutoScroll();
+
+            // Restore per-song autoscroll settings
+            this.stopAutoScroll(true);
+            const auto = this.perSongAutoScroll[song.id];
+            if (auto) {
+                if (typeof auto.delay === 'number') this.autoscrollDelay = auto.delay;
+                if (typeof auto.speed === 'number') this.autoScrollSpeed = auto.speed;
+                if (auto.active) this.startAutoScroll();
+            } else {
+                this.autoscrollDelay = Number(localStorage.getItem('autoscrollDelay')) || 3;
+                this.autoScrollSpeed = Number(localStorage.getItem('autoscrollSpeed')) || 1;
+            }
             this.updateAutoScrollButton();
             this.autoScrollBtn.blur();
         },
@@ -536,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigatePerformanceSong(direction) {
             const newIndex = this.currentPerformanceSongIndex + direction;
             if (newIndex >= 0 && newIndex < this.performanceSongs.length) {
+                this.stopAutoScroll();
                 this.currentPerformanceSongIndex = newIndex;
                 this.displayCurrentPerformanceSong();
             }
@@ -583,9 +605,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.scrollTop += this.autoScrollSpeed;
                 }, 50);
             }, this.autoscrollDelay * 1000);
+            const song = this.performanceSongs[this.currentPerformanceSongIndex];
+            if (song && song.id) {
+                const settings = this.perSongAutoScroll[song.id] || {};
+                settings.delay = this.autoscrollDelay;
+                settings.speed = this.autoScrollSpeed;
+                settings.active = true;
+                this.perSongAutoScroll[song.id] = settings;
+                localStorage.setItem('perSongAutoScroll', JSON.stringify(this.perSongAutoScroll));
+            }
         },
 
-        stopAutoScroll() {
+        stopAutoScroll(skipSave = false) {
             this.autoScrollActive = false;
             if (this.autoScrollTimer) {
                 clearInterval(this.autoScrollTimer);
@@ -594,6 +625,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.autoScrollDelayTimer) {
                 clearTimeout(this.autoScrollDelayTimer);
                 this.autoScrollDelayTimer = null;
+            }
+            if (!skipSave) {
+                const song = this.performanceSongs[this.currentPerformanceSongIndex];
+                if (song && song.id) {
+                    const settings = this.perSongAutoScroll[song.id] || {};
+                    settings.delay = this.autoscrollDelay;
+                    settings.speed = this.autoScrollSpeed;
+                    settings.active = false;
+                    this.perSongAutoScroll[song.id] = settings;
+                    localStorage.setItem('perSongAutoScroll', JSON.stringify(this.perSongAutoScroll));
+                }
             }
         },
 
