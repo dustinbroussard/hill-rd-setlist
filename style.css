@@ -515,6 +515,10 @@ img, video, iframe {
     pointer-events: auto; /* Ensure it can receive clicks */
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* ========================================
     Song List and Setlist Editor
     ======================================== */
