@@ -1627,3 +1627,14 @@ html, body {
   opacity: 1;
 }
 
+/* Lyrics Editing */
+.lyrics-line { white-space: pre-wrap; }
+.section-label { font-weight:bold; margin:.4em 0 .2em; }
+.chord-line { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; opacity:.9; }
+.lyric-text[contenteditable="true"],
+.chord-line[contenteditable="true"],
+.section-label[contenteditable="true"] {
+  outline: 2px solid transparent;
+}
+[contenteditable="true"]:focus { outline: 2px solid var(--accent-primary); border-radius: 6px; }
+
