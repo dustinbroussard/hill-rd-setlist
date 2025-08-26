@@ -584,6 +584,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.songTitleInput.value = '';
                 this.songLyricsInput.value = '';
             }
+            // enable/disable Save
+            const validate = () => {
+                const t = this.normalizeTitle(this.songTitleInput.value.trim());
+                const isGeneric = /^(new song|untitled|new|song)$/i.test(t);
+                this.saveSongBtn.disabled = !t || isGeneric;
+            };
+            this.songTitleInput.removeEventListener('_validate', validate); // no-op label to avoid duplicates
+            this.songTitleInput.addEventListener('input', validate);
+            validate();
+
             this.songModal.style.display = 'block';
         },
 
@@ -592,15 +602,27 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         saveSong() {
-            const title = this.normalizeTitle(this.songTitleInput.value.trim());
-            const lyrics = this.songLyricsInput.value.trim();
-            if (!title) return;
+            const rawTitle = this.songTitleInput.value.trim();
+            const title = this.normalizeTitle(rawTitle);
+            const lyrics = (this.songLyricsInput.value || '').trim();
+
+            // Treat placeholder/generic titles as invalid if lyrics are empty
+            const isGenericTitle = /^(new song|untitled|new|song)$/i.test(title);
+
+            if (!title || (isGenericTitle && lyrics.length === 0)) {
+                alert('Please enter a real song title (not "New Song"/"Untitled") and/or add some lyrics.');
+                return;
+            }
+
             if (this.currentSongId) {
                 const song = this.songs.find(s => s.id === this.currentSongId);
-                song.title = title;
-                song.lyrics = lyrics;
+                if (song) {
+                    song.title = title;
+                    song.lyrics = lyrics;
+                }
             } else {
                 if (this.isDuplicateTitle(title)) {
+                    alert('A song with that title already exists.');
                     this.closeSongModal();
                     return;
                 }
@@ -628,33 +650,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         handleFileUpload(event) {
             const files = event.target.files;
+            const MIN_USEFUL_LEN = 3; // tweak if you want
+
             for (const file of files) {
+                const pushIfValid = (proposedTitle, rawLyrics) => {
+                    const title = this.normalizeTitle(proposedTitle || '');
+                    const lyrics = (rawLyrics || '').toString().trim();
+
+                    const isGenericTitle = /^(new song|untitled|new|song)$/i.test(title);
+                    const looksEmpty = lyrics.replace(/\s+/g, '').length < MIN_USEFUL_LEN;
+
+                    // Skip junky uploads
+                    if (!title || (isGenericTitle && looksEmpty)) return;
+                    if (this.isDuplicateTitle(title)) return;
+
+                    this.songs.push({ id: Date.now().toString(), title, lyrics });
+                    this.saveData();
+                    this.renderSongs();
+                };
+
                 const reader = new FileReader();
                 if (file.name.endsWith('.docx')) {
                     reader.onload = (e) => {
                         mammoth.extractRawText({ arrayBuffer: e.target.result })
                             .then(result => {
-                                const title = this.normalizeTitle(file.name);
-                                if (this.isDuplicateTitle(title)) return;
-                                const lyrics = result.value;
-                                this.songs.push({ id: Date.now().toString(), title, lyrics });
-                                this.saveData();
-                                this.renderSongs();
+                                pushIfValid(file.name, result.value);
                             });
                     };
                     reader.readAsArrayBuffer(file);
                 } else {
                     reader.onload = (e) => {
-                        const title = this.normalizeTitle(file.name);
-                        if (this.isDuplicateTitle(title)) return;
-                        const lyrics = e.target.result;
-                        this.songs.push({ id: Date.now().toString(), title, lyrics });
-                        this.saveData();
-                        this.renderSongs();
+                        pushIfValid(file.name, e.target.result);
                     };
                     reader.readAsText(file);
                 }
             }
+            // optional: clear input
+            event.target.value = '';
         },
 
         // Setlist Management
