@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.autoScrollBtn.addEventListener('click', () => this.toggleAutoScroll());
             this.autoscrollSettingsBtn.addEventListener('click', () => {
-                this.autoscrollDelayModal.style.display = 'block';
+                this.autoscrollDelayModal.classList.add('is-open');
                 this.autoscrollDelaySlider.value = this.autoscrollDelay;
                 this.autoscrollDelayValue.textContent = this.autoscrollDelay + 's';
                 this.autoscrollSpeedSlider.value = this.autoScrollSpeed;
@@ -230,14 +230,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('autoscrollDelay', this.autoscrollDelay);
                 this.autoScrollSpeed = Number(this.autoscrollSpeedSlider.value);
                 localStorage.setItem('autoscrollSpeed', this.autoScrollSpeed);
-                this.autoscrollDelayModal.style.display = 'none';
+                this.autoscrollDelayModal.classList.remove('is-open');
             });
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
 
-            this.perfMenuBtn?.addEventListener('click', ()=> this.perfMenuModal.style.display='block');
-            this.perfMenuClose?.addEventListener('click', ()=> this.perfMenuModal.style.display='none');
+            this.perfMenuBtn?.addEventListener('click', ()=> this.perfMenuModal.classList.add('is-open'));
+            this.perfMenuClose?.addEventListener('click', ()=> this.perfMenuModal.classList.remove('is-open'));
 
             this.perfEditModeSelect?.addEventListener('change', (e)=>{
               this.editMode = e.target.value;
@@ -261,18 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.perfMetadataSave?.addEventListener('click', ()=>{
               this.saveMetadata();
-              this.perfMetadataModal.style.display='none';
+              this.perfMetadataModal.classList.remove('is-open');
               this.updateHeaderMetaLine();
             });
 
             this.perfMetadataClose?.addEventListener('click', ()=>{
-              this.perfMetadataModal.style.display='none';
+              this.perfMetadataModal.classList.remove('is-open');
             });
 
             document.addEventListener('keydown', (e)=>{
               if(e.key==='Escape'){
-                if(this.perfMenuModal?.style.display==='block') this.perfMenuModal.style.display='none';
-                if(this.perfMetadataModal?.style.display==='block') this.perfMetadataModal.style.display='none';
+                if(this.autoscrollDelayModal?.classList.contains('is-open')) this.autoscrollDelayModal.classList.remove('is-open');
+                if(this.perfMenuModal?.classList.contains('is-open')) this.perfMenuModal.classList.remove('is-open');
+                if(this.perfMetadataModal?.classList.contains('is-open')) this.perfMetadataModal.classList.remove('is-open');
               }
             });
         },
@@ -458,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
           this.perfTS.value = song.timeSignature || '4/4';
           this.perfTags.value = (song.tags||[]).join(', ');
           this.perfNotes.value = song.notes || '';
-          this.perfMetadataModal.style.display='block';
+          this.perfMetadataModal.classList.add('is-open');
         },
 
         saveMetadata(){
