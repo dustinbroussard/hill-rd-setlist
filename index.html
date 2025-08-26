@@ -46,7 +46,6 @@
         <section id="songs" class="tab active">
             <div class="page-content songs-page">
                 <div id="song-list" class="song-list"></div>
-                <div id="song-lyrics" class="lyrics-container"></div>
             </div>
         </section>
 
@@ -93,29 +92,6 @@
                 <button id="cancel-setlist-btn" class="btn">Cancel</button>
             </div>
         </div>
-    </div>
-
-    <div id="metadata-modal" class="modal">
-      <div class="modal-content">
-        <h2>Song Info</h2>
-        <label>Key <select id="meta-key">
-          <option value="">(none)</option><option>C</option><option>C#</option><option>D</option><option>D#</option>
-          <option>E</option><option>F</option><option>F#</option><option>G</option><option>G#</option>
-          <option>A</option><option>A#</option><option>B</option>
-        </select></label>
-        <label>Tempo <input id="meta-tempo" type="number" min="40" max="260" value="120"></label>
-        <label>Time Signature
-          <select id="meta-ts">
-            <option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>12/8</option>
-          </select>
-        </label>
-        <label>Tags <input id="meta-tags" placeholder="rock, ballad, easy"></label>
-        <label>Notes <textarea id="meta-notes" rows="3" placeholder="Performance notes…"></textarea></label>
-        <div class="modal-actions">
-          <button id="save-meta" class="btn">Save</button>
-          <button id="close-meta" class="btn danger">Close</button>
-        </div>
-      </div>
     </div>
     </div>
     <script src="script.js"></script>
