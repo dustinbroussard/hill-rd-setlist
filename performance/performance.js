@@ -4,16 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMode: document.getElementById('performance-mode'),
         performanceSongInfo: document.getElementById('performance-song-info'),
         lyricsDisplay: document.getElementById('lyrics-display'),
-        decreaseFontBtn: document.getElementById('decrease-font-btn'),
-        increaseFontBtn: document.getElementById('increase-font-btn'),
-        fontSizeDisplay: document.getElementById('font-size-display'),
-        toggleThemeBtn: document.getElementById('theme-toggle-btn'),
-        exitPerformanceBtn: document.getElementById('exit-performance-btn'),
+        decreaseFontBtn: document.getElementById('footer-decrease-font-btn'),
+        increaseFontBtn: document.getElementById('footer-increase-font-btn'),
+        fontSizeDisplay: document.getElementById('footer-font-size-display'),
+        toggleThemeBtn: document.getElementById('footer-theme-toggle-btn'),
+        exitPerformanceBtn: document.getElementById('footer-exit-performance-btn'),
         prevSongBtn: document.getElementById('prev-song-btn'),
         nextSongBtn: document.getElementById('next-song-btn'),
         scrollToTopBtn: document.getElementById('scroll-to-top-btn'),
         autoScrollBtn: document.getElementById('auto-scroll-btn'),
-        autoscrollSettingsBtn: document.getElementById('autoscroll-settings-btn'),
+        autoscrollSettingsBtn: document.getElementById('footer-autoscroll-settings-btn'),
         autoscrollDelayModal: document.getElementById('autoscroll-delay-modal'),
         autoscrollDelaySlider: document.getElementById('autoscroll-delay-slider'),
         autoscrollDelayValue: document.getElementById('autoscroll-delay-value'),
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         autoscrollSpeedValue: document.getElementById('autoscroll-speed-value'),
         closeAutoscrollDelayModal: document.getElementById('close-autoscroll-delay-modal'),
 
-        perfMenuBtn: document.getElementById('perf-menu-btn'),
+        perfMenuBtn: document.getElementById('footer-perf-menu-btn'),
         perfMenuModal: document.getElementById('performance-menu-modal'),
         perfMenuClose: document.getElementById('perf-menu-close'),
         perfEditModeSelect: document.getElementById('perf-edit-mode'),
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.autoScrollBtn.addEventListener('click', () => this.toggleAutoScroll());
             this.autoscrollSettingsBtn.addEventListener('click', () => {
-                this.autoscrollDelayModal.style.display = 'block';
+                this.autoscrollDelayModal.classList.add('is-open');
                 this.autoscrollDelaySlider.value = this.autoscrollDelay;
                 this.autoscrollDelayValue.textContent = this.autoscrollDelay + 's';
                 this.autoscrollSpeedSlider.value = this.autoScrollSpeed;
@@ -230,14 +230,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('autoscrollDelay', this.autoscrollDelay);
                 this.autoScrollSpeed = Number(this.autoscrollSpeedSlider.value);
                 localStorage.setItem('autoscrollSpeed', this.autoScrollSpeed);
-                this.autoscrollDelayModal.style.display = 'none';
+                this.autoscrollDelayModal.classList.remove('is-open');
             });
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
 
-            this.perfMenuBtn?.addEventListener('click', ()=> this.perfMenuModal.style.display='block');
-            this.perfMenuClose?.addEventListener('click', ()=> this.perfMenuModal.style.display='none');
+            this.perfMenuBtn?.addEventListener('click', ()=> this.perfMenuModal.classList.add('is-open'));
+            this.perfMenuClose?.addEventListener('click', ()=> this.perfMenuModal.classList.remove('is-open'));
 
             this.perfEditModeSelect?.addEventListener('change', (e)=>{
               this.editMode = e.target.value;
@@ -261,18 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.perfMetadataSave?.addEventListener('click', ()=>{
               this.saveMetadata();
-              this.perfMetadataModal.style.display='none';
+              this.perfMetadataModal.classList.remove('is-open');
               this.updateHeaderMetaLine();
             });
 
             this.perfMetadataClose?.addEventListener('click', ()=>{
-              this.perfMetadataModal.style.display='none';
+              this.perfMetadataModal.classList.remove('is-open');
             });
 
             document.addEventListener('keydown', (e)=>{
               if(e.key==='Escape'){
-                if(this.perfMenuModal?.style.display==='block') this.perfMenuModal.style.display='none';
-                if(this.perfMetadataModal?.style.display==='block') this.perfMetadataModal.style.display='none';
+                if(this.perfMenuModal?.classList.contains('is-open')) this.perfMenuModal.classList.remove('is-open');
+                if(this.perfMetadataModal?.classList.contains('is-open')) this.perfMetadataModal.classList.remove('is-open');
+                if(this.autoscrollDelayModal?.classList.contains('is-open')) this.autoscrollDelayModal.classList.remove('is-open');
               }
             });
         },
@@ -458,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
           this.perfTS.value = song.timeSignature || '4/4';
           this.perfTags.value = (song.tags||[]).join(', ');
           this.perfNotes.value = song.notes || '';
-          this.perfMetadataModal.style.display='block';
+          this.perfMetadataModal.classList.add('is-open');
         },
 
         saveMetadata(){

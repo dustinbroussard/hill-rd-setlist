@@ -1,13 +1,13 @@
-const CACHE_NAME = 'hill-rd-setlist-manager-v1';
+const CACHE_NAME = 'hill-rd-setlist-manager-v2';
 const urlsToCache = [
     '/',
     '/index.html',
     '/style.css',
     '/script.js',
     '/manifest.json',
-    '/performance/performance.html',
-    '/performance/performance.js',
-    '/performance/performance.css',
+    '/performance.html',
+    '/performance.js',
+    '/performance.css',
     '/assets/icons/icon-192x192.png',
     '/assets/icons/icon-512x512.png',
     '/assets/images/mylogo.png',

@@ -32,6 +32,25 @@
     font-weight: bold;
 }
 
+.performance-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 56px;
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2025;
+}
+
+.performance-footer .performance-controls {
+    justify-content: center;
+    margin-right: 0;
+}
+
 .performance-controls {
     display: flex;
     align-items: center;
@@ -98,7 +117,7 @@
     letter-spacing: 0.01em;
     word-break: break-word;
     white-space: pre-line;
-    padding: 0.8em 0.5em 1.2em 0.5em;
+    padding: 0.8em 0.5em 4.5em 0.5em;
     text-align: center;
     max-width: 100%;
     margin: 0 auto;
@@ -165,11 +184,11 @@
 }
 
 .scroll-to-top-btn {
-    bottom: 120px;
+    bottom: 176px;
 }
 
 .auto-scroll-btn {
-    bottom: 52px;
+    bottom: 108px;
     display: flex;
 }
 
@@ -203,25 +222,18 @@
     transition: opacity 0.18s;
 }
 
-#autoscroll-settings-btn i {
+#footer-autoscroll-settings-btn i {
     color: var(--accent-primary, #fff);
 }
 
-#autoscroll-delay-modal {
-    z-index: 20000;
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.82);
-   -cast-align-items: center;
-    justify-content: center;
+#autoscroll-delay-modal,
+#performance-menu-modal,
+#perf-metadata-modal {
+    z-index: 20030;
 }
 
-#autoscroll-delay-modal[style*="display: block"] {
-    display: flex;
+#autoscroll-delay-modal {
+    background: rgba(0,0,0,0.82);
 }
 
 #autoscroll-delay-modal .modal-content {
@@ -275,11 +287,11 @@
       transition: background 0.22s, opacity 0.14s, color 0.14s;
     }
     .scroll-to-top-btn {
-      bottom: 100px;
-    } 
+      bottom: 156px;
+    }
 
     .auto-scroll-btn {
-      bottom: 52px;
+      bottom: 108px;
       display: flex;
     }
     
