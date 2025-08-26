@@ -190,15 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const songNumber = this.currentPerformanceSongIndex + 1;
             const totalSongs = this.performanceSongs.length;
-            const metaBits = [];
-            if (song.key) metaBits.push(song.key);
-            if (song.tempo) metaBits.push(`${song.tempo} BPM`);
-            if (song.timeSignature && song.timeSignature !== '4/4') metaBits.push(song.timeSignature);
-            const notesHtml = song.notes ? `<div class="perf-notes">${song.notes}</div>` : '';
             this.performanceSongInfo.innerHTML = `
                 <h2>${song.title}</h2>
-                ${metaBits.length ? `<div class="song-meta">${metaBits.join(' • ')}</div>` : ''}
-                ${notesHtml}
                 <div class="song-progress">${songNumber} / ${totalSongs}</div>
             `;
 		    

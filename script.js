@@ -10,67 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ==== LYRIC UTILITIES ====
-function cleanAIOutput(text='') {
-  return text
-    .replace(/\r\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+$/gm, '')
-    .replace(/^\s+|\s+$/g, '')
-    .replace(/^(Verse|Chorus|Bridge|Outro)[^\n]*$/gmi, '[$1]')
-    .replace(/^#+\s*/gm, '')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/^(Capo|Key|Tempo|Time Signature).*$/gmi, '')
-    .trim();
-}
-
-function normalizeSectionLabels(text='') {
-  const sectionKeywords = ['intro','verse','prechorus','chorus','bridge','outro','hook','refrain','coda','solo','interlude','ending','breakdown','tag'];
-  return text.split(/\r?\n/).map(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return line;
-    const m = trimmed.match(/^[\*\s\-_=~`]*[\(\[\{]?\s*([^\]\)\}]+?)\s*[\)\]\}]?[\*\s\-_=~`]*:?$/);
-    if (m) {
-      const label = m[1].trim();
-      const normalized = label.toLowerCase().replace(/[^a-z]/g,'');
-      if (sectionKeywords.some(k => normalized.startsWith(k))) {
-        const formatted = label.replace(/\s+/g,' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
-        return `[${formatted}]`;
-      }
-    }
-    return line;
-  }).join('\n');
-}
-
-function trimExtraEmptyLines(text='') {
-  const lines = text.split('\n');
-  const out = [];
-  let prevEmpty = false;
-  for (const line of lines) {
-    const isEmpty = line.trim() === '';
-    if (isEmpty && prevEmpty) continue;
-    out.push(line);
-    prevEmpty = isEmpty;
-  }
-  return out.join('\n');
-}
-
-function enforceAlternating(lines) {
-  const chords = [], lyrics = [];
-  for (let i=0;i<lines.length;i++) {
-    if (i % 2 === 0) chords.push(lines[i] || '');
-    else lyrics.push(lines[i] || '');
-  }
-  return { chords, lyrics };
-}
-
-function formatLyricsWithChords(lyrics, chords) {
-  const L = (lyrics||'').split('\n');
-  const C = (chords||'').split('\n');
-  return L.map((ly, i) => (C[i]?.trim() ? `${C[i]}\n${ly}` : ly)).join('\n');
-}
-
-// ==== SETLIST MANAGER MODULE
+// ==== SETLIST MANAGER MODULE 
 function normalizeSetlistName(name) {
     return name.replace(/\.[^/.]+$/, '')  // Remove file extension
         .replace(/[_\-]+/g, ' ')
@@ -279,9 +219,9 @@ const SetlistsManager = (() => {
             case 'txt':
                 return songs.map(song => song.title).join('\n');
             case 'csv':
-                const header = 'Title,Lyrics,Chords,Key,Tempo,TimeSignature,Notes,Tags,CreatedAt,LastEditedAt\n';
-                const rows = songs.map(song =>
-                    `"${(song.title||'').replace(/"/g, '""')}","${(song.lyrics||'').replace(/"/g, '""')}","${(song.chords||'').replace(/"/g, '""')}","${(song.key||'').replace(/"/g, '""')}","${song.tempo||''}","${(song.timeSignature||'').replace(/"/g, '""')}","${(song.notes||'').replace(/"/g, '""')}","${Array.isArray(song.tags)?song.tags.join(' ').replace(/"/g,'""'):''}","${song.createdAt||''}","${song.lastEditedAt||''}"`
+                const header = 'Title,Lyrics\n';
+                const rows = songs.map(song => 
+                    `"${song.title.replace(/"/g, '""')}","${song.lyrics.replace(/"/g, '""')}"`
                 ).join('\n');
                 return header + rows;
             default:
@@ -310,12 +250,6 @@ const SetlistsManager = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-    let activeSong = null;
-    let isEditMode = false;
-    let editScope = localStorage.getItem('editScope') || 'both';
-    let showChords = JSON.parse(localStorage.getItem('showChords') || 'false');
-    const metaModal = document.getElementById('metadata-modal');
-
     const app = {
         normalizeTitle(title) {
             let t = title.replace(/\.[^/.]+$/, '');
@@ -374,17 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i></button>
                     <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i></label>
                 </div>
-                <div class="toolbar-buttons-group">
-                    <label class="btn"><input id="toggle-edit" type="checkbox" hidden> Edit</label>
-                    <select id="edit-scope" class="setlist-select">
-                        <option value="both">Both</option>
-                        <option value="lyrics">Lyrics</option>
-                        <option value="chords">Chords</option>
-                    </select>
-                    <label class="btn"><input id="toggle-chords" type="checkbox" hidden> Chords</label>
-                    <button id="normalize-btn" class="btn">Normalize</button>
-                    <button id="metadata-btn" class="btn">Metadata</button>
-                </div>
                 <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
             `,
             setlists: `
@@ -434,11 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.addSongBtn = document.getElementById('add-song-btn');
                 this.deleteAllSongsBtn = document.getElementById('delete-all-songs-btn');
                 this.songUploadInput = document.getElementById('song-upload-input');
-                this.toggleEdit = document.getElementById('toggle-edit');
-                this.editScopeSelect = document.getElementById('edit-scope');
-                this.toggleChords = document.getElementById('toggle-chords');
-                this.normalizeBtn = document.getElementById('normalize-btn');
-                this.metadataBtn = document.getElementById('metadata-btn');
 
                 this.songSearchInput.addEventListener('input', () => this.renderSongs());
                 this.addSongBtn.addEventListener('click', () => this.openSongModal());
@@ -450,55 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 this.songUploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
-
-                if (this.toggleEdit) {
-                    this.toggleEdit.checked = isEditMode;
-                    this.toggleEdit.addEventListener('change', e => {
-                        isEditMode = e.target.checked;
-                        renderActiveSong();
-                    });
-                }
-                if (this.editScopeSelect) {
-                    this.editScopeSelect.value = editScope;
-                    this.editScopeSelect.addEventListener('change', e => {
-                        editScope = e.target.value;
-                        localStorage.setItem('editScope', editScope);
-                        renderActiveSong();
-                    });
-                }
-                if (this.toggleChords) {
-                    this.toggleChords.checked = showChords;
-                    this.toggleChords.addEventListener('change', e => {
-                        showChords = e.target.checked;
-                        localStorage.setItem('showChords', JSON.stringify(showChords));
-                        renderActiveSong();
-                    });
-                }
-                this.normalizeBtn?.addEventListener('click', () => {
-                    if (!activeSong) return;
-                    activeSong.lyrics = trimExtraEmptyLines(
-                        normalizeSectionLabels(
-                            cleanAIOutput(activeSong.lyrics || '')
-                        )
-                    );
-                    const t = (activeSong.title||'').trim().toLowerCase();
-                    const L = activeSong.lyrics.split('\n');
-                    if (L.length && L[0].trim().toLowerCase() === t) {
-                        L.shift(); if (L[0]?.trim()==='') L.shift();
-                        activeSong.lyrics = L.join('\n');
-                    }
-                    saveSongs();
-                    renderActiveSong();
-                });
-                this.metadataBtn?.addEventListener('click', () => {
-                    if (!activeSong) return;
-                    document.getElementById('meta-key').value = activeSong.key || '';
-                    document.getElementById('meta-tempo').value = activeSong.tempo ?? 120;
-                    document.getElementById('meta-ts').value = activeSong.timeSignature || '4/4';
-                    document.getElementById('meta-tags').value = (activeSong.tags||[]).join(', ');
-                    document.getElementById('meta-notes').value = activeSong.notes || '';
-                    metaModal.style.display = 'flex';
-                });
             } else if (tab === 'setlists') {
                 this.setlistSelect = document.getElementById('setlist-select');
                 this.newSetlistBtn = document.getElementById('new-setlist-btn');
@@ -587,20 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Data Management
         loadData() {
-            const raw = JSON.parse(localStorage.getItem('songs')) || [];
-            this.songs = raw.map(s => ({
-                id: s.id,
-                title: s.title,
-                lyrics: s.lyrics || '',
-                chords: s.chords || '',
-                key: s.key || '',
-                tempo: typeof s.tempo === 'number' ? s.tempo : 120,
-                timeSignature: s.timeSignature || '4/4',
-                notes: s.notes || '',
-                tags: Array.isArray(s.tags) ? s.tags : [],
-                createdAt: s.createdAt || new Date().toISOString(),
-                lastEditedAt: s.lastEditedAt || s.createdAt || new Date().toISOString()
-            }));
+            this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.dataset.theme = theme;
         },
@@ -648,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const song = this.getLyricById(id);
             if (song) {
                 song.lyrics = newLyrics;
-                song.lastEditedAt = new Date().toISOString();
                 this.saveData();
             }
         },
@@ -694,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .sort((a, b) => a.title.localeCompare(b.title));
             this.songList.innerHTML = filteredSongs.map(song => `
                 <div class="song-item" data-id="${song.id}">
-                    <span class="song-title">${song.title}</span>
+                    <span>${song.title}</span>
                     <div class="song-actions">
                         <button class="btn edit-song-btn"><i class="fas fa-pen"></i></button>
                         <button class="btn danger delete-song-btn"><i class="fas fa-trash"></i></button>
@@ -715,13 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.deleteSong(id);
                 });
             });
-
-            document.querySelectorAll('.song-title').forEach(span => {
-                span.addEventListener('click', (e) => {
-                    const id = e.target.closest('.song-item').dataset.id;
-                    this.openSongView(id);
-                });
-            });
         },
 
         openSongModal(id = null) {
@@ -739,51 +587,27 @@ document.addEventListener('DOMContentLoaded', () => {
             this.songModal.style.display = 'block';
         },
 
-        openSongView(id) {
-            activeSong = this.getLyricById(id);
-            renderActiveSong();
-        },
-
         closeSongModal() {
             this.songModal.style.display = 'none';
         },
 
         saveSong() {
             const title = this.normalizeTitle(this.songTitleInput.value.trim());
-            let lyrics = this.songLyricsInput.value.trim();
-            lyrics = trimExtraEmptyLines(normalizeSectionLabels(cleanAIOutput(lyrics)));
-            const t = title.trim().toLowerCase();
-            const L = lyrics.split('\n');
-            if (L.length && L[0].trim().toLowerCase() === t) {
-                L.shift(); if (L[0]?.trim()==='') L.shift();
-                lyrics = L.join('\n');
-            }
+            const lyrics = this.songLyricsInput.value.trim();
             if (!title) return;
             if (this.currentSongId) {
                 const song = this.songs.find(s => s.id === this.currentSongId);
-                if (song) {
-                    song.title = title;
-                    song.lyrics = lyrics;
-                    song.lastEditedAt = new Date().toISOString();
-                }
+                song.title = title;
+                song.lyrics = lyrics;
             } else {
                 if (this.isDuplicateTitle(title)) {
                     this.closeSongModal();
                     return;
                 }
-                const now = new Date().toISOString();
                 this.songs.push({
                     id: Date.now().toString(),
                     title,
                     lyrics,
-                    chords: '',
-                    key: '',
-                    tempo: 120,
-                    timeSignature: '4/4',
-                    notes: '',
-                    tags: [],
-                    createdAt: now,
-                    lastEditedAt: now
                 });
             }
             this.saveData();
@@ -812,15 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             .then(result => {
                                 const title = this.normalizeTitle(file.name);
                                 if (this.isDuplicateTitle(title)) return;
-                                let lyrics = trimExtraEmptyLines(normalizeSectionLabels(cleanAIOutput(result.value || '')));
-                                const t = title.trim().toLowerCase();
-                                const L = lyrics.split('\n');
-                                if (L.length && L[0].trim().toLowerCase() === t) {
-                                    L.shift(); if (L[0]?.trim()==='') L.shift();
-                                    lyrics = L.join('\n');
-                                }
-                                const now = new Date().toISOString();
-                                this.songs.push({ id: Date.now().toString(), title, lyrics, chords:'', key:'', tempo:120, timeSignature:'4/4', notes:'', tags:[], createdAt:now, lastEditedAt:now });
+                                const lyrics = result.value;
+                                this.songs.push({ id: Date.now().toString(), title, lyrics });
                                 this.saveData();
                                 this.renderSongs();
                             });
@@ -830,15 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onload = (e) => {
                         const title = this.normalizeTitle(file.name);
                         if (this.isDuplicateTitle(title)) return;
-                        let lyrics = trimExtraEmptyLines(normalizeSectionLabels(cleanAIOutput(e.target.result || '')));
-                        const t = title.trim().toLowerCase();
-                        const L = lyrics.split('\n');
-                        if (L.length && L[0].trim().toLowerCase() === t) {
-                            L.shift(); if (L[0]?.trim()==='') L.shift();
-                            lyrics = L.join('\n');
-                        }
-                        const now = new Date().toISOString();
-                        this.songs.push({ id: Date.now().toString(), title, lyrics, chords:'', key:'', tempo:120, timeSignature:'4/4', notes:'', tags:[], createdAt:now, lastEditedAt:now });
+                        const lyrics = e.target.result;
+                        this.songs.push({ id: Date.now().toString(), title, lyrics });
                         this.saveData();
                         this.renderSongs();
                     };
@@ -1121,92 +931,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 150);
         }
     };
-
-    function saveSongs() {
-        app.saveData();
-    }
-
-    function handleLyricsEdit(container) {
-        if (!activeSong) return;
-        const nodes = Array.from(container.querySelectorAll('.section-label, .chord-line, .lyric-text'));
-        const lyricOut = [];
-        const chordOut = [];
-        nodes.forEach(n => {
-            if (n.classList.contains('section-label')) {
-                lyricOut.push(n.textContent);
-            } else if (n.classList.contains('chord-line')) {
-                chordOut.push(n.textContent);
-            } else if (n.classList.contains('lyric-text')) {
-                lyricOut.push(n.textContent);
-                if (!showChords) {
-                    chordOut.push('');
-                }
-            }
-        });
-        activeSong.lyrics = trimExtraEmptyLines(normalizeSectionLabels(lyricOut.join('\n')));
-        activeSong.chords = trimExtraEmptyLines(chordOut.join('\n'));
-        activeSong.lastEditedAt = new Date().toISOString();
-        saveSongs();
-    }
-
-    function renderActiveSong() {
-        if (!activeSong) return;
-        const container = document.getElementById('lyrics-content') || document.getElementById('lyrics-display') || document.getElementById('song-lyrics');
-        if (!container) return;
-
-        const lyricLines = (activeSong.lyrics||'').split('\n');
-        const chordLines = (activeSong.chords||'').split('\n');
-
-        container.innerHTML = '';
-        let chordIdx = 0;
-
-        const addLine = (text, className, editable=false) => {
-            const div = document.createElement('div');
-            div.className = className;
-            div.textContent = text;
-            if (editable) {
-                div.setAttribute('contenteditable','true');
-                div.addEventListener('input', () => handleLyricsEdit(container));
-            }
-            container.appendChild(div);
-            return div;
-        };
-
-        for (let i=0;i<lyricLines.length;i++) {
-            const row = lyricLines[i];
-
-            if (/^\s*\[.+\]\s*$/.test(row.trim())) {
-                addLine(row.trim(), 'lyrics-line section-label',
-                    isEditMode && (editScope==='both' || editScope==='lyrics'));
-                continue;
-            }
-
-            if (showChords) {
-                const chordText = chordLines[chordIdx] || '';
-                addLine(chordText, 'lyrics-line chord-line',
-                    isEditMode && (editScope==='both' || editScope==='chords'));
-            }
-
-            addLine(row, 'lyrics-line lyric-text',
-                isEditMode && (editScope==='both' || editScope==='lyrics'));
-
-            chordIdx++;
-        }
-    }
-
-    document.getElementById('save-meta')?.addEventListener('click', () => {
-        if (!activeSong) return;
-        activeSong.key = document.getElementById('meta-key').value || '';
-        activeSong.tempo = parseInt(document.getElementById('meta-tempo').value) || 120;
-        activeSong.timeSignature = document.getElementById('meta-ts').value || '4/4';
-        activeSong.notes = document.getElementById('meta-notes').value || '';
-        activeSong.tags = (document.getElementById('meta-tags').value || '').split(',').map(s=>s.trim()).filter(Boolean);
-        activeSong.lastEditedAt = new Date().toISOString();
-        saveSongs();
-        metaModal.style.display = 'none';
-        renderActiveSong();
-    });
-    document.getElementById('close-meta')?.addEventListener('click', () => metaModal.style.display='none');
 
     app.init();
 
