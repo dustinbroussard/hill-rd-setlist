@@ -612,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             this.saveData();
             this.renderSongs();
-            closeSonglistModal();
+            this.closeSongModal();
         },
 
         deleteSong(id) {
