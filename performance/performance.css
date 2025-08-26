@@ -336,5 +336,11 @@
 .performance-header .song-meta-line .notes-icon:hover { opacity: 1; }
 
 .lyrics-line-group { margin-bottom: 0.35em; }
-.chord-line { white-space: pre; font-size: 0.85em; color: var(--accent-secondary, #ccc); }
+.lyric-text,
+.chord-line { text-align: left; }
+.chord-line {
+  white-space: pre;
+  font-size: 0.75em;
+  color: var(--text-muted, #888);
+}
 .section-label { margin-top: 0.6em; font-weight: bold; }

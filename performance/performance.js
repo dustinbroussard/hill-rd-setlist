@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const title = song.title || '';
           const lyricsNorm = this.normalizeSectionLabels( this.cleanText( this.stripTitleLine(song.lyrics||'', title) ) );
-          const chordsClean = this.cleanText(song.chords||'');
+          const chordsClean = this.compactBlankLines((song.chords||'').replace(/\r\n/g,'\n'));
           const {L, C} = this.splitChordLyric(lyricsNorm, chordsClean);
 
           this.lyricsDisplay.innerHTML = '';
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if(!song) return;
           let L = this.stripTitleLine(this.cleanText(song.lyrics||''), song.title||'');
           L = this.normalizeSectionLabels( this.compactBlankLines(L) );
-          let C = this.compactBlankLines( this.cleanText(song.chords||'') );
+          let C = this.compactBlankLines((song.chords||'').replace(/\r\n/g,'\n'));
           const Ls=L.split('\n'); const Cs=C.split('\n');
           const max=Math.max(Ls.length,Cs.length);
           while(Ls.length<max) Ls.push(''); while(Cs.length<max) Cs.push('');

@@ -1202,15 +1202,6 @@ img, video, iframe {
 
 #autoscroll-delay-modal {
   z-index: 20000 !important;
-  display: none;  /* Still controlled by JS */
-  position: fixed !important;
-  left: 0; top: 0; width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.82) !important;
-  align-items: center;
-  justify-content: center;
-}
-#autoscroll-delay-modal[style*="display: block"] {
-  display: flex !important;
 }
 #autoscroll-delay-modal .modal-content {
   position: relative;
