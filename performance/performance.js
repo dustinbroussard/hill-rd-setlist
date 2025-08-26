@@ -7,13 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
         decreaseFontBtn: document.getElementById('decrease-font-btn'),
         increaseFontBtn: document.getElementById('increase-font-btn'),
         fontSizeDisplay: document.getElementById('font-size-display'),
-        toggleThemeBtn: document.getElementById('theme-toggle-btn'),
-        exitPerformanceBtn: document.getElementById('exit-performance-btn'),
+        footerDecreaseFontBtn: document.getElementById('footer-decrease-font-btn'),
+        footerIncreaseFontBtn: document.getElementById('footer-increase-font-btn'),
+        footerFontSizeDisplay: document.getElementById('footer-font-size-display'),
+        toggleThemeBtn: document.getElementById('footer-theme-toggle-btn') || document.getElementById('theme-toggle-btn'),
+        exitPerformanceBtn: document.getElementById('footer-exit-performance-btn') || document.getElementById('exit-performance-btn'),
         prevSongBtn: document.getElementById('prev-song-btn'),
         nextSongBtn: document.getElementById('next-song-btn'),
         scrollToTopBtn: document.getElementById('scroll-to-top-btn'),
         autoScrollBtn: document.getElementById('auto-scroll-btn'),
-        autoscrollSettingsBtn: document.getElementById('autoscroll-settings-btn'),
+        autoscrollSettingsBtn: document.getElementById('footer-autoscroll-settings-btn') || document.getElementById('autoscroll-settings-btn'),
         autoscrollDelayModal: document.getElementById('autoscroll-delay-modal'),
         autoscrollDelaySlider: document.getElementById('autoscroll-delay-slider'),
         autoscrollDelayValue: document.getElementById('autoscroll-delay-value'),
@@ -21,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         autoscrollSpeedValue: document.getElementById('autoscroll-speed-value'),
         closeAutoscrollDelayModal: document.getElementById('close-autoscroll-delay-modal'),
 
-        perfMenuBtn: document.getElementById('perf-menu-btn'),
+        perfMenuBtn: document.getElementById('footer-perf-menu-btn') || document.getElementById('perf-menu-btn'),
         perfMenuModal: document.getElementById('performance-menu-modal'),
         perfMenuClose: document.getElementById('perf-menu-close'),
         perfEditModeSelect: document.getElementById('perf-edit-mode'),
@@ -201,18 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Setup event listeners
         setupEventListeners() {
             // FONT SIZE BUTTONS
-            this.decreaseFontBtn.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
-            this.increaseFontBtn.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
+            this.decreaseFontBtn?.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
+            this.increaseFontBtn?.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
+            this.footerDecreaseFontBtn?.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
+            this.footerIncreaseFontBtn?.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
 
-            this.toggleThemeBtn.addEventListener('click', () => this.handlePerformanceThemeToggle());
-            this.exitPerformanceBtn.addEventListener('click', () => this.exitPerformanceMode());
+            this.toggleThemeBtn?.addEventListener('click', () => this.handlePerformanceThemeToggle());
+            this.exitPerformanceBtn?.addEventListener('click', () => this.exitPerformanceMode());
             this.prevSongBtn.addEventListener('click', () => this.navigatePerformanceSong(-1));
             this.nextSongBtn.addEventListener('click', () => this.navigatePerformanceSong(1));
             this.scrollToTopBtn.addEventListener('click', () => {
                 this.lyricsDisplay.scrollTo({ top: 0, behavior: 'smooth' });
             });
             this.autoScrollBtn.addEventListener('click', () => this.toggleAutoScroll());
-            this.autoscrollSettingsBtn.addEventListener('click', () => {
+            this.autoscrollSettingsBtn?.addEventListener('click', () => {
                 this.autoscrollDelayModal.classList.add('is-open');
                 this.autoscrollDelaySlider.value = this.autoscrollDelay;
                 this.autoscrollDelayValue.textContent = this.autoscrollDelay + 's';
@@ -520,6 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (this.fontSizeDisplay) {
                 this.fontSizeDisplay.textContent = `${Math.round(this.fontSize)}px`;
+            }
+            if (this.footerFontSizeDisplay) {
+                this.footerFontSizeDisplay.textContent = `${Math.round(this.fontSize)}px`;
             }
             setTimeout(() => this.updateScrollButtonsVisibility(), 100);
         },
