@@ -106,6 +106,15 @@
     transition: color var(--transition-speed);
 }
 
+/* Ensure centered lyrics across deployments (GitHub/Vercel)
+   Use ID selector with !important to beat any external/global rules */
+#lyrics-display {
+    text-align: center !important;
+    direction: ltr;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .nav-arrow {
     position: absolute;
     top: 50%;

@@ -682,6 +682,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // Restore previously chosen performance setlist if applicable
+            if (this.performanceSetlistSelect && this.performanceSetlistId) {
+                this.performanceSetlistSelect.value = this.performanceSetlistId;
+            }
+
             if (setlists.length && this.currentSetlistId) {
                 if (this.setlistSelect) this.setlistSelect.value = this.currentSetlistId;
                 this.renderSetlistSongs();
@@ -892,8 +897,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         handleStartPerformance() {
-            if (this.performanceSetlistId) {
-                const setlist = SetlistsManager.getSetlistById(this.performanceSetlistId);
+            // Read the current selection directly to avoid stale state
+            const selectedSetlistId = (this.performanceSetlistSelect && this.performanceSetlistSelect.value) || this.performanceSetlistId || null;
+            if (selectedSetlistId) {
+                const setlist = SetlistsManager.getSetlistById(selectedSetlistId);
                 if (setlist && setlist.songs.length > 0) {
                     this.startPerformanceWithSong(setlist.songs[0]);
                 } else {
@@ -910,8 +917,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startPerformanceWithSong(songId) {
             const params = new URLSearchParams();
-            if (this.performanceSetlistId) {
-                params.set('setlistId', this.performanceSetlistId);
+            // Prefer reading from DOM to ensure correct, current selection
+            const selectedSetlistId = (this.performanceSetlistSelect && this.performanceSetlistSelect.value) || this.performanceSetlistId || null;
+            if (selectedSetlistId) {
+                params.set('setlistId', selectedSetlistId);
             }
             params.set('songId', songId);
             window.location.href = `performance/performance.html?${params.toString()}`;

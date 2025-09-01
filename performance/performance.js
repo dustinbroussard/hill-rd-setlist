@@ -97,7 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.currentPerformanceSongIndex === -1) {
                 this.currentPerformanceSongIndex = 0;
             }
-            this.maybeResumeSetlist();
+            // If a specific songId was requested, respect it and do not override
+            // with resume prompt. Only prompt when launching without a specific song.
+            if (!songId) {
+                this.maybeResumeSetlist();
+            }
         },
 
         maybeResumeSetlist() {
@@ -345,4 +349,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     app.init();
 });
-
