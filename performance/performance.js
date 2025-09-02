@@ -4,22 +4,38 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMode: document.getElementById('performance-mode'),
         performanceSongInfo: document.getElementById('performance-song-info'),
         lyricsDisplay: document.getElementById('lyrics-display'),
-        decreaseFontBtn: document.getElementById('decrease-font-btn'),
-        increaseFontBtn: document.getElementById('increase-font-btn'),
-        fontSizeDisplay: document.getElementById('font-size-display'),
-        toggleThemeBtn: document.getElementById('theme-toggle-btn'),
-        exitPerformanceBtn: document.getElementById('exit-performance-btn'),
+        decreaseFontBtn: document.getElementById('footer-decrease-font-btn'),
+        increaseFontBtn: document.getElementById('footer-increase-font-btn'),
+        fontSizeDisplay: document.getElementById('footer-font-size-display'),
+        toggleThemeBtn: document.getElementById('footer-theme-toggle-btn'),
+        exitPerformanceBtn: document.getElementById('footer-exit-performance-btn'),
         prevSongBtn: document.getElementById('prev-song-btn'),
         nextSongBtn: document.getElementById('next-song-btn'),
         scrollToTopBtn: document.getElementById('scroll-to-top-btn'),
         autoScrollBtn: document.getElementById('auto-scroll-btn'),
-        autoscrollSettingsBtn: document.getElementById('autoscroll-settings-btn'),
+        autoscrollSettingsBtn: document.getElementById('footer-autoscroll-settings-btn'),
         autoscrollDelayModal: document.getElementById('autoscroll-delay-modal'),
         autoscrollDelaySlider: document.getElementById('autoscroll-delay-slider'),
         autoscrollDelayValue: document.getElementById('autoscroll-delay-value'),
         autoscrollSpeedSlider: document.getElementById('autoscroll-speed-slider'),
         autoscrollSpeedValue: document.getElementById('autoscroll-speed-value'),
         closeAutoscrollDelayModal: document.getElementById('close-autoscroll-delay-modal'),
+
+        perfMenuBtn: document.getElementById('footer-perf-menu-btn'),
+        perfMenuModal: document.getElementById('performance-menu-modal'),
+        perfMenuClose: document.getElementById('perf-menu-close'),
+        perfEditModeSelect: document.getElementById('perf-edit-mode'),
+        perfChordModeSelect: document.getElementById('perf-chord-mode'),
+        perfNormalizeBtn: document.getElementById('perf-normalize-btn'),
+        perfMetadataBtn: document.getElementById('perf-metadata-btn'),
+        perfMetadataModal: document.getElementById('perf-metadata-modal'),
+        perfMetadataSave: document.getElementById('perf-metadata-save'),
+        perfMetadataClose: document.getElementById('perf-metadata-close'),
+        perfKey: document.getElementById('perf-key'),
+        perfTempo: document.getElementById('perf-tempo'),
+        perfTS: document.getElementById('perf-ts'),
+        perfTags: document.getElementById('perf-tags'),
+        perfNotes: document.getElementById('perf-notes'),
 
         // State
         songs: [],
@@ -35,15 +51,65 @@ document.addEventListener('DOMContentLoaded', () => {
         autoscrollDelay: Number(localStorage.getItem('autoscrollDelay')) || 3,
         resizeObserver: null,
 
+        editMode: localStorage.getItem('perfEditMode') || 'readonly',
+        chordMode: localStorage.getItem('perfChordMode') || 'both',
+
         fontSize: 32, // default value; will set per song
         perSongFontSizes: JSON.parse(localStorage.getItem('perSongFontSizes') || '{}'),
         minFontSize: 16,
         maxFontSize: 72,
         fontSizeStep: 1,
 
+        normalizeSectionLabels(text='') {
+          const keys = ['intro','verse','prechorus','chorus','bridge','outro','hook','refrain','coda','solo','interlude','ending','breakdown','tag'];
+          return text.split(/\r?\n/).map(line=>{
+            const t=line.trim(); if(!t) return line;
+            const m=t.match(/^[\*\s\-_=~`]*[\(\[\{]?\s*([^\]\)\}]+?)\s*[\)\]\}]?[\*\s\-_=~`]*:?$/);
+            if(!m) return line;
+            const label=m[1].trim(); const norm=label.toLowerCase().replace(/[^a-z]/g,'');
+            if(keys.some(k=>norm.startsWith(k))){
+              const formatted=label.replace(/\s+/g,' ').replace(/(^|\s)\S/g,c=>c.toUpperCase());
+              return `[${formatted}]`;
+            }
+            return line;
+          }).join('\n');
+        },
+        cleanText(text=''){ return text
+          .replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n')
+          .replace(/[ \t]+$/gm,'').replace(/^\s+|\s+$/g,'')
+          .replace(/^(Verse|Chorus|Bridge|Outro)[^\n]*$/gmi,'[$1]')
+          .replace(/^#+\s*/gm,'').replace(/```[\s\S]*?```/g,'')
+          .trim();
+        },
+        stripTitleLine(lyrics, title){
+          const lines=lyrics.split('\n'); const norm=(title||'').trim().toLowerCase();
+          if(lines.length && lines[0].trim().toLowerCase()===norm){
+            lines.shift(); if(lines[0]?.trim()==='') lines.shift();
+          }
+          return lines.join('\n');
+        },
+        splitChordLyric(lyrics='', chords=''){
+          const L=lyrics.split('\n'); const C=chords.split('\n');
+          const max=Math.max(L.length,C.length);
+          while(C.length<max) C.push('');
+          while(L.length<max) L.push('');
+          return {L,C};
+        },
+        compactBlankLines(text=''){
+          const out=[]; let prevEmpty=false;
+          for(const line of text.split('\n')){
+            const empty=line.trim()==='';
+            if(!(empty && prevEmpty)) out.push(line);
+            prevEmpty = empty;
+          }
+          return out.join('\n');
+        },
+
         // Initialize
         init() {
             this.loadData();
+            if (this.perfEditModeSelect) this.perfEditModeSelect.value = this.editMode;
+            if (this.perfChordModeSelect) this.perfChordModeSelect.value = this.chordMode;
             this.setupEventListeners();
             this.loadPerformanceState();
             this.displayCurrentPerformanceSong();
@@ -151,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.autoScrollBtn.addEventListener('click', () => this.toggleAutoScroll());
             this.autoscrollSettingsBtn.addEventListener('click', () => {
-                this.autoscrollDelayModal.style.display = 'block';
+                this.autoscrollDelayModal.classList.add('is-open');
                 this.autoscrollDelaySlider.value = this.autoscrollDelay;
                 this.autoscrollDelayValue.textContent = this.autoscrollDelay + 's';
                 this.autoscrollSpeedSlider.value = this.autoScrollSpeed;
@@ -168,11 +234,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('autoscrollDelay', this.autoscrollDelay);
                 this.autoScrollSpeed = Number(this.autoscrollSpeedSlider.value);
                 localStorage.setItem('autoscrollSpeed', this.autoScrollSpeed);
-                this.autoscrollDelayModal.style.display = 'none';
+                this.autoscrollDelayModal.classList.remove('is-open');
             });
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
+
+            this.perfMenuBtn?.addEventListener('click', ()=> this.perfMenuModal.classList.add('is-open'));
+            this.perfMenuClose?.addEventListener('click', ()=> this.perfMenuModal.classList.remove('is-open'));
+
+            this.perfEditModeSelect?.addEventListener('change', (e)=>{
+              this.editMode = e.target.value;
+              localStorage.setItem('perfEditMode', this.editMode);
+              this.applyEditMode();
+            });
+
+            this.perfChordModeSelect?.addEventListener('change', (e)=>{
+              this.chordMode = e.target.value;
+              localStorage.setItem('perfChordMode', this.chordMode);
+              this.displayCurrentPerformanceSong();
+            });
+
+            this.perfNormalizeBtn?.addEventListener('click', ()=>{
+              this.normalizeCurrentSong();
+            });
+
+            this.perfMetadataBtn?.addEventListener('click', ()=>{
+              this.openMetadata();
+            });
+
+            this.perfMetadataSave?.addEventListener('click', ()=>{
+              this.saveMetadata();
+              this.perfMetadataModal.classList.remove('is-open');
+              this.updateHeaderMetaLine();
+            });
+
+            this.perfMetadataClose?.addEventListener('click', ()=>{
+              this.perfMetadataModal.classList.remove('is-open');
+            });
+
+            document.addEventListener('keydown', (e)=>{
+              if(e.key==='Escape'){
+                if(this.perfMenuModal?.classList.contains('is-open')) this.perfMenuModal.classList.remove('is-open');
+                if(this.perfMetadataModal?.classList.contains('is-open')) this.perfMetadataModal.classList.remove('is-open');
+                if(this.autoscrollDelayModal?.classList.contains('is-open')) this.autoscrollDelayModal.classList.remove('is-open');
+              }
+            });
         },
 
         // Display current song
@@ -199,10 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="song-progress">${songNumber} / ${totalSongs}</div>
             `;
 		    
-	    this.lyricsDisplay.textContent = lines.join('\n');
+            song.lyrics = lines.join('\n');
+            this.renderLyrics();
+            this.updateHeaderMetaLine();
 
-	// Restore per-song font size if present, else use last-used or default
-	    let fs = this.perSongFontSizes[song.id];
+        // Restore per-song font size if present, else use last-used or default
+            let fs = this.perSongFontSizes[song.id];
 	    if (typeof fs !== 'number') {
 	    // fallback to previous fontSize or default
 	         fs = this.fontSize || 32;
@@ -215,6 +324,186 @@ document.addEventListener('DOMContentLoaded', () => {
             this.stopAutoScroll();
             this.updateAutoScrollButton();
             this.autoScrollBtn.blur();
+        },
+
+        renderLyrics(){
+          const song = this.performanceSongs[this.currentPerformanceSongIndex];
+          if(!song) return;
+
+          const title = song.title || '';
+          const lyricsNorm = this.normalizeSectionLabels( this.cleanText( this.stripTitleLine(song.lyrics||'', title) ) );
+          const chordsClean = this.cleanText(song.chords||'');
+          const {L, C} = this.splitChordLyric(lyricsNorm, chordsClean);
+
+          this.lyricsDisplay.innerHTML = '';
+          const frag = document.createDocumentFragment();
+
+          let currentSection = null;
+          for(let i=0;i<L.length;i++){
+            const line = L[i]||'';
+
+            if(/^\[.+\]$/.test(line.trim())){
+              const section = document.createElement('div');
+              section.className='section';
+              const header = document.createElement('div');
+              header.className='lyrics-line section-label';
+              const label = document.createElement('span');
+              label.className='section-label-text';
+              label.textContent=line.trim();
+              header.appendChild(label);
+              section.appendChild(header);
+              frag.appendChild(section);
+              currentSection = document.createElement('div');
+              currentSection.className='section-content';
+              section.appendChild(currentSection);
+              continue;
+            }
+
+            const group = document.createElement('div');
+            group.className='lyrics-line-group';
+
+            const chordText = C[i]||'';
+            const chordEl = document.createElement('div');
+            chordEl.className='chord-line';
+            chordEl.textContent = chordText;
+
+            const lyricEl = document.createElement('div');
+            lyricEl.className='lyric-text';
+            lyricEl.textContent = line;
+
+            const mode=this.chordMode;
+            chordEl.style.display = (mode==='off'||mode==='lyrics') ? 'none' : 'block';
+            lyricEl.style.display = (mode==='chords') ? 'none' : 'block';
+
+            chordEl.addEventListener('input', ()=> this.persistEditsFromDOM());
+            lyricEl.addEventListener('input', ()=> this.persistEditsFromDOM());
+
+            group.appendChild(chordEl);
+            group.appendChild(lyricEl);
+            (currentSection || frag).appendChild(group);
+          }
+
+          this.lyricsDisplay.appendChild(frag);
+          this.applyEditMode();
+          setTimeout(()=> this.updateScrollButtonsVisibility(), 100);
+        },
+
+        applyEditMode(){
+          const container = this.lyricsDisplay;
+          if(!container) return;
+          container.querySelectorAll('[contenteditable]').forEach(n=> n.setAttribute('contenteditable','false'));
+          if(this.editMode==='readonly') return;
+
+          if(this.editMode==='lyrics' || this.editMode==='both'){
+            container.querySelectorAll('.lyric-text').forEach(n=> n.setAttribute('contenteditable','true'));
+          }
+          if(this.editMode==='chords' || this.editMode==='both'){
+            container.querySelectorAll('.chord-line').forEach(n=> n.setAttribute('contenteditable','true'));
+          }
+        },
+
+        persistEditsFromDOM(){
+          const song = this.performanceSongs[this.currentPerformanceSongIndex];
+          if(!song) return;
+
+          const lyricLines=[]; const chordLines=[];
+          this.lyricsDisplay.querySelectorAll('.section, .lyrics-line-group').forEach(node=>{
+            if(node.classList.contains('section')){
+              const label = node.querySelector('.section-label-text')?.textContent || '';
+              if(label.trim()) lyricLines.push(label.trim());
+              node.querySelectorAll('.lyrics-line-group').forEach(group=>{
+                const chord = group.querySelector('.chord-line')?.textContent ?? '';
+                const lyric = group.querySelector('.lyric-text')?.textContent ?? '';
+                chordLines.push(chord);
+                lyricLines.push(lyric);
+              });
+            } else {
+              const chord = node.querySelector('.chord-line')?.textContent ?? '';
+              const lyric = node.querySelector('.lyric-text')?.textContent ?? '';
+              chordLines.push(chord);
+              lyricLines.push(lyric);
+            }
+          });
+
+          let lyricsOut = this.normalizeSectionLabels( this.compactBlankLines(lyricLines.join('\n')) );
+          let chordsOut = this.compactBlankLines(chordLines.join('\n'));
+
+          song.lyrics = lyricsOut;
+          song.chords = chordsOut;
+          song.lastEditedAt = new Date().toISOString();
+
+          const all = JSON.parse(localStorage.getItem('songs') || '[]');
+          const idx = all.findIndex(s=> s.id===song.id);
+          if(idx!==-1){ all[idx]=song; localStorage.setItem('songs', JSON.stringify(all)); }
+        },
+
+        normalizeCurrentSong(){
+          const song = this.performanceSongs[this.currentPerformanceSongIndex];
+          if(!song) return;
+          let L = this.stripTitleLine(this.cleanText(song.lyrics||''), song.title||'');
+          L = this.normalizeSectionLabels( this.compactBlankLines(L) );
+          let C = this.compactBlankLines( this.cleanText(song.chords||'') );
+          const Ls=L.split('\n'); const Cs=C.split('\n');
+          const max=Math.max(Ls.length,Cs.length);
+          while(Ls.length<max) Ls.push(''); while(Cs.length<max) Cs.push('');
+          song.lyrics = Ls.join('\n');
+          song.chords = Cs.join('\n');
+          song.lastEditedAt = new Date().toISOString();
+          const all = JSON.parse(localStorage.getItem('songs') || '[]');
+          const idx = all.findIndex(s=> s.id===song.id);
+          if(idx!==-1){ all[idx]=song; localStorage.setItem('songs', JSON.stringify(all)); }
+
+          this.displayCurrentPerformanceSong();
+        },
+
+        openMetadata(){
+          const song=this.performanceSongs[this.currentPerformanceSongIndex]; if(!song) return;
+          this.perfKey.value = song.key || '';
+          this.perfTempo.value = song.tempo || 120;
+          this.perfTS.value = song.timeSignature || '4/4';
+          this.perfTags.value = (song.tags||[]).join(', ');
+          this.perfNotes.value = song.notes || '';
+          this.perfMetadataModal.classList.add('is-open');
+        },
+
+        saveMetadata(){
+          const song=this.performanceSongs[this.currentPerformanceSongIndex]; if(!song) return;
+          song.key = this.perfKey.value || '';
+          song.tempo = parseInt(this.perfTempo.value || '120',10);
+          song.timeSignature = this.perfTS.value || '4/4';
+          song.tags = this.perfTags.value.split(',').map(t=>t.trim()).filter(Boolean);
+          song.notes = this.perfNotes.value || '';
+          song.lastEditedAt = new Date().toISOString();
+          const all = JSON.parse(localStorage.getItem('songs') || '[]');
+          const idx = all.findIndex(s=> s.id===song.id);
+          if(idx!==-1){ all[idx]=song; localStorage.setItem('songs', JSON.stringify(all)); }
+        },
+
+        updateHeaderMetaLine(){
+          const song=this.performanceSongs[this.currentPerformanceSongIndex]; if(!song) return;
+          const metaBits=[];
+          if(song.key) metaBits.push(song.key);
+          if(song.tempo) metaBits.push(`${song.tempo} BPM`);
+          if(song.timeSignature && song.timeSignature!=='4/4') metaBits.push(song.timeSignature);
+          let html = metaBits.join(' • ');
+          if(song.notes && song.notes.trim()){
+            html += ` <i id="perf-notes-icon" class="fas fa-info-circle notes-icon" title="Show notes"></i>`;
+          }
+
+          let metaLine = this.performanceSongInfo.querySelector('.song-meta-line');
+          if(!metaLine){
+            metaLine = document.createElement('div');
+            metaLine.className='song-meta-line';
+            this.performanceSongInfo.appendChild(metaLine);
+          }
+          metaLine.innerHTML = html || '';
+
+          const icon = document.getElementById('perf-notes-icon');
+          if(icon){
+            icon.addEventListener('click', ()=>{
+              alert(song.notes || 'No notes');
+            });
+          }
         },
 
         // Font size methods
