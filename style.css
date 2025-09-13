@@ -1189,6 +1189,30 @@ img, video, iframe {
     background: rgba(0,0,0,0.8) !important;
 }
 
+/* Make the song modal nearly full-screen for practical lyrics editing */
+#song-modal .modal-content {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    height: 92vh !important;
+    max-height: 92vh !important;
+    margin: 2vh auto !important;
+    display: flex;
+    flex-direction: column;
+    padding: min(2vh, 20px);
+}
+
+#song-modal #song-lyrics-input {
+    flex: 1 1 auto;
+    min-height: 0;           /* allow flexbox to control height */
+    max-height: none;        /* remove small cap */
+    resize: vertical;        /* still let users expand if desired */
+    overflow: auto;
+}
+
+#song-modal .modal-actions {
+    margin-top: 0.6rem;
+}
+
 /* Optional: Only show auto-scroll button in performance mode */
 #performance-mode[style*="display: flex"] .auto-scroll-btn {
     display: flex !important;
@@ -1626,4 +1650,3 @@ html, body {
   color: var(--accent-primary, #fff);
   opacity: 1;
 }
-

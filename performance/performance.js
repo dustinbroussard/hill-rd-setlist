@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMode: document.getElementById('performance-mode'),
         performanceSongInfo: document.getElementById('performance-song-info'),
         lyricsDisplay: document.getElementById('lyrics-display'),
+        fontControlsEl: document.getElementById('font-controls'),
         decreaseFontBtn: document.getElementById('decrease-font-btn'),
         increaseFontBtn: document.getElementById('increase-font-btn'),
         fontSizeDisplay: document.getElementById('font-size-display'),
@@ -40,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
         minFontSize: 16,
         maxFontSize: 72,
         fontSizeStep: 1,
+        fontFab: null,
+        _fontOutsideHandler: null,
+        _fontControlsTimer: null,
 
         // Initialize
         init() {
@@ -48,6 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.loadPerformanceState();
             this.displayCurrentPerformanceSong();
             this.setupResizeObserver();
+            this.initFontControlsMobile();
+            window.addEventListener('resize', (() => {
+                let t;
+                return () => { clearTimeout(t); t = setTimeout(() => this.initFontControlsMobile(), 200); };
+            })());
         },
 
         // Setup resize observer for auto-fit (unchanged)
@@ -137,6 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // FONT SIZE BUTTONS
             this.decreaseFontBtn.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
             this.increaseFontBtn.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
+            // Keep floating controls visible while interacting
+            if (this.fontControlsEl) {
+                const reset = () => this.resetFontControlsHideTimer();
+                this.fontControlsEl.addEventListener('mousemove', reset);
+                this.fontControlsEl.addEventListener('touchstart', reset, { passive: true });
+            }
 
             this.toggleThemeBtn.addEventListener('click', () => this.handlePerformanceThemeToggle());
             this.exitPerformanceBtn.addEventListener('click', () => this.exitPerformanceMode());
@@ -169,6 +184,66 @@ document.addEventListener('DOMContentLoaded', () => {
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
+        },
+
+        // Floating font controls (mobile/tablet) modeled after editor
+        initFontControlsMobile() {
+            const isMobile = window.innerWidth <= 1024;
+            if (!this.fontControlsEl) return;
+            if (!isMobile) {
+                this.fontControlsEl.classList.add('visible');
+                if (this.fontFab && this.fontFab.parentNode) this.fontFab.parentNode.removeChild(this.fontFab);
+                this.fontFab = null;
+                this.clearFontControlsHideTimer?.();
+                return;
+            }
+            // On mobile: keep hidden until user taps FAB
+            this.fontControlsEl.classList.remove('visible');
+            if (!this.fontFab) {
+                const btn = document.createElement('button');
+                btn.className = 'font-fab';
+                btn.title = 'Font controls';
+                btn.innerHTML = '<i class="fas fa-text-height"></i>';
+                document.body.appendChild(btn);
+                btn.addEventListener('click', () => this.showFontControls());
+                this.fontFab = btn;
+            }
+            // Hide when clicking outside controls
+            if (!this._fontOutsideHandler) {
+                this._fontOutsideHandler = (e) => {
+                    if (!this.fontControlsEl.classList.contains('visible')) return;
+                    if (this.fontControlsEl.contains(e.target)) return;
+                    if (this.fontFab && this.fontFab.contains(e.target)) return;
+                    this.hideFontControls();
+                };
+                document.addEventListener('click', this._fontOutsideHandler);
+            }
+        },
+
+        showFontControls() {
+            if (!this.fontControlsEl) return;
+            this.fontControlsEl.classList.add('visible');
+            if (this.fontFab) this.fontFab.classList.add('hidden');
+            this.resetFontControlsHideTimer();
+        },
+
+        hideFontControls() {
+            if (!this.fontControlsEl) return;
+            this.fontControlsEl.classList.remove('visible');
+            if (this.fontFab) this.fontFab.classList.remove('hidden');
+            this.clearFontControlsHideTimer();
+        },
+
+        resetFontControlsHideTimer() {
+            this.clearFontControlsHideTimer();
+            this._fontControlsTimer = setTimeout(() => this.hideFontControls(), 4000);
+        },
+
+        clearFontControlsHideTimer() {
+            if (this._fontControlsTimer) {
+                clearTimeout(this._fontControlsTimer);
+                this._fontControlsTimer = null;
+            }
         },
 
         // Display current song
@@ -345,4 +420,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     app.init();
 });
-
