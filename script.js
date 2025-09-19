@@ -148,7 +148,20 @@ const SetlistsManager = (() => {
     async function load() {
         try {
             const arr = await DB.getAllSetlists();
-            setlists = new Map((arr || []).map(obj => [obj.id, obj]));
+            const repaired = [];
+            for (const obj of (arr || [])) {
+                const fixed = { ...obj };
+                // Repair missing or malformed fields from older local data
+                if (!fixed || typeof fixed !== 'object') continue;
+                if (!fixed.id) {
+                    fixed.id = (Date.now().toString() + Math.random().toString(16).slice(2));
+                    fixed.updatedAt = Date.now();
+                    try { await DB.putSetlist(fixed); } catch {}
+                }
+                if (!Array.isArray(fixed.songs)) fixed.songs = [];
+                repaired.push(fixed);
+            }
+            setlists = new Map(repaired.map(obj => [obj.id, obj]));
         } catch (error) {
             console.error('Failed loading setlists from DB', error);
             setlists = new Map();
@@ -445,9 +458,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button id="duplicate-setlist-btn" class="btn" title="Duplicate"><i class="fas fa-copy"></i></button>
                     <button id="delete-setlist-btn" class="btn danger" title="Delete"><i class="fas fa-trash"></i></button>
                     <button id="import-setlist-btn" class="btn" title="Import"><i class="fas fa-file-import"></i></button>
+                    <button id="import-setlist-image-btn" class="btn" title="Import from Image (OCR)"><i class="fas fa-image"></i></button>
                     <button id="export-setlist-btn" class="btn" title="Export"><i class="fas fa-file-export"></i></button>
                 </div>
                 <input type="file" id="import-setlist-file" accept=".txt,.docx" class="hidden-file">
+                <input type="file" id="import-setlist-image" accept="image/*" class="hidden-file">
             `,
             performance: `
                 <select id="performance-setlist-select" class="setlist-select"></select>
@@ -521,6 +536,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const m = document.getElementById('import-modal');
                     if (m) m.style.display = 'flex';
                 });
+                // OCR image import triggers hidden input
+                document.getElementById('import-setlist-image-btn')?.addEventListener('click', () => {
+                    document.getElementById('import-setlist-image')?.click();
+                });
+                document.getElementById('import-setlist-image')?.addEventListener('change', (e) => this.handleImportSetlistImage(e));
                 document.getElementById('export-setlist-btn').addEventListener('click', () => {
                     const m = document.getElementById('export-modal');
                     if (m) m.style.display = 'flex';
@@ -535,6 +555,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 const perfVoiceBtn = document.getElementById('performance-voice-btn');
                 this.setupSpeechToText(this.performanceSongSearch, perfVoiceBtn, () => this.handlePerformanceSongSearch());
                 this.startPerformanceBtn.addEventListener('click', () => this.handleStartPerformance());
+            }
+        },
+
+        async handleImportSetlistImage(event) {
+            try {
+                const input = event.target;
+                const file = input?.files?.[0];
+                if (!file) return;
+                if (!window.Tesseract || !window.Tesseract.recognize) {
+                    showToast('OCR not available (Tesseract failed to load).', 'error', 3500);
+                    return;
+                }
+                showToast('Running OCR on image…', 'info', 2000);
+                const { data } = await Tesseract.recognize(file, 'eng', {
+                    workerPath: 'lib/tesseract/worker.min.js',
+                    corePath: 'lib/tesseract/tesseract-core.wasm',
+                    langPath: 'lib/tesseract'
+                });
+                let text = (data && data.text) ? data.text : '';
+                text = String(text).replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n');
+                if (!text.trim()) { showToast('No text detected in image.', 'info'); return; }
+
+                const suggested = this.normalizeTitle(file.name.replace(/\.[^.]+$/, '')) || 'New Setlist';
+                const name = prompt('Name for this setlist:', suggested);
+                if (!name) { showToast('Import cancelled.', 'info'); return; }
+
+                const result = SetlistsManager.importSetlistFromText(name, text, this.songs);
+                if (!result) return; // Import function shows its own toasts
+                // Switch to new setlist
+                this.currentSetlistId = result.setlist.id;
+                await this.saveData();
+                this.renderSetlists();
+                showToast(`Imported ${result.imported} songs from image.`, 'success');
+            } catch (e) {
+                console.error('OCR import failed', e);
+                showToast('Failed to import from image.', 'error');
+            } finally {
+                // Reset file input for subsequent imports
+                const el = document.getElementById('import-setlist-image');
+                if (el) el.value = '';
             }
         },
 
@@ -1398,7 +1458,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.setlistSelect.innerHTML = '<option value="">Select a setlist...</option>';
             }
             if (this.performanceSetlistSelect) {
+                const prev = this.performanceSetlistSelect.value || this.performanceSetlistId || '';
                 this.performanceSetlistSelect.innerHTML = '<option value="">All Songs</option>';
+                this.performanceSetlistSelect.dataset.prevValue = prev;
             }
 
             setlists.forEach(s => {
@@ -1410,11 +1472,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (this.performanceSetlistSelect) {
                     const perfOpt = document.createElement('option');
-                    perfOpt.value = s.id;
+                    perfOpt.value = s.id || '';
                     perfOpt.textContent = s.name;
                     this.performanceSetlistSelect.appendChild(perfOpt);
                 }
             });
+
+            if (this.performanceSetlistSelect) {
+                const restore = this.performanceSetlistSelect.dataset.prevValue || '';
+                if (restore) this.performanceSetlistSelect.value = restore;
+            }
 
             if (setlists.length && this.currentSetlistId) {
                 if (this.setlistSelect) this.setlistSelect.value = this.currentSetlistId;
@@ -1655,6 +1722,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams();
             if (this.performanceSetlistId) {
                 params.set('setlistId', this.performanceSetlistId);
+                // Include a fallback list of IDs for local file environments
+                const setlist = SetlistsManager.getSetlistById(this.performanceSetlistId);
+                if (setlist && Array.isArray(setlist.songs) && setlist.songs.length) {
+                    // Compact encode: comma-separated IDs
+                    try { params.set('ids', setlist.songs.join(',')); } catch (_) {}
+                }
             }
             params.set('songId', songId);
             window.location.href = `performance/performance.html?${params.toString()}`;

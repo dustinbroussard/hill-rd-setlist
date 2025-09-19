@@ -17,6 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="lib/idb.min.js"></script>
     <script src="lib/mammoth.browser.min.js"></script>
+    <script src="lib/tesseract/tesseract.min.js"></script>
 </head>
 <body>
 <div class="main-box">
@@ -146,5 +147,12 @@
     </div>
     </div>
     <script src="script.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
 </body>
 </html>

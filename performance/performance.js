@@ -136,11 +136,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             this.performanceSetlistId = params.get('setlistId') || null;
             const songId = params.get('songId');
+            const idsParam = params.get('ids');
             if (this.performanceSetlistId) {
                 const setlists = await DB.getAllSetlists();
                 const setlist = (setlists||[]).find(s => s.id === this.performanceSetlistId);
                 if (setlist) {
                     this.performanceSongs = setlist.songs
+                        .map(id => this.songs.find(s => s.id === id))
+                        .filter(Boolean);
+                } else if (idsParam) {
+                    // Fallback for local file environments where IDB may not share across pages
+                    const ids = idsParam.split(',').filter(Boolean);
+                    this.performanceSongs = ids
                         .map(id => this.songs.find(s => s.id === id))
                         .filter(Boolean);
                 }
