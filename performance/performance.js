@@ -1,4 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ==== TOASTS ====
+    function showToast(message, type = 'success', timeout = 2500) {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type} show`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(() => toast.remove(), 300); }, timeout);
+    }
+    function confirmDialog(message, onYes, onNo) {
+      const modal = document.createElement('div');
+      modal.className = 'modal'; modal.style.display = 'flex';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <h2>Confirm</h2>
+          <p>${message}</p>
+          <div class="modal-actions">
+            <button class="btn" id="confirm-yes">Yes</button>
+            <button class="btn" id="confirm-no">No</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector('#confirm-yes').onclick = () => { modal.remove(); onYes && onYes(); };
+      modal.querySelector('#confirm-no').onclick = () => { modal.remove(); onNo && onNo(); };
+    }
+
+    // ==== DB MODULE (dupe for performance context)
+    const DB = (() => {
+      const DB_NAME = 'hrr-setlist-db';
+      const DB_VERSION = 1;
+      let _db;
+      async function open(){ if(_db) return _db; _db = await idb.openDB(DB_NAME, DB_VERSION, { upgrade(db){ if(!db.objectStoreNames.contains('songs')){ const s=db.createObjectStore('songs',{keyPath:'id'}); if(s.createIndex) s.createIndex('title','title',{unique:false}); } if(!db.objectStoreNames.contains('setlists')){ const sl=db.createObjectStore('setlists',{keyPath:'id'}); if(sl.createIndex) sl.createIndex('name','name',{unique:false}); } if(!db.objectStoreNames.contains('meta')){ db.createObjectStore('meta'); } } }); return _db; }
+      return {
+        async getAllSongs(){ const db=await open(); return db.getAll('songs'); },
+        async getAllSetlists(){ const db=await open(); return db.getAll('setlists'); }
+      };
+    })();
     const app = {
         // DOM Elements
         performanceMode: document.getElementById('performance-mode'),
@@ -47,9 +84,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initialize
         init() {
-            this.loadData();
+            (async () => {
+            // Run migration if needed (e.g., if opened directly)
+            try {
+              const migrated = await (async ()=>{ try{ const db=await idb.openDB('hrr-setlist-db',1); return db.get('meta','migrated'); } catch(_){ return true; } })();
+              if (migrated !== true) {
+                const songsRaw = localStorage.getItem('songs');
+                const setlistsRaw = localStorage.getItem('setlists');
+                if (songsRaw) { try { const arr=JSON.parse(songsRaw)||[]; const db=await idb.openDB('hrr-setlist-db',1); const tx=db.transaction('songs','readwrite'); for (const s of arr) await tx.store.put(s); await tx.done; } catch (e) {} }
+                if (setlistsRaw) { try { const arr=JSON.parse(setlistsRaw)||[]; const db=await idb.openDB('hrr-setlist-db',1); const tx=db.transaction('setlists','readwrite'); for (const s of arr) await tx.store.put(s); await tx.done; } catch (e) {} }
+                try { const db=await idb.openDB('hrr-setlist-db',1); await db.put('meta', true, 'migrated'); } catch (e) {}
+              }
+            } catch(e) {}
+            await this.loadData();
             this.setupEventListeners();
-            this.loadPerformanceState();
+            await this.loadPerformanceState();
             this.displayCurrentPerformanceSong();
             this.setupResizeObserver();
             this.initFontControlsMobile();
@@ -57,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let t;
                 return () => { clearTimeout(t); t = setTimeout(() => this.initFontControlsMobile(), 200); };
             })());
+            })();
         },
 
         // Setup resize observer for auto-fit (unchanged)
@@ -74,28 +124,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        // Load data from localStorage
-        loadData() {
-            this.songs = JSON.parse(localStorage.getItem('songs')) || [];
-            const theme = localStorage.getItem('theme') || 'default-dark';
+        // Load data
+        async loadData() {
+            try { this.songs = await DB.getAllSongs(); } catch (e) { this.songs = []; }
+            const theme = (localStorage.getItem('theme') === 'light') ? 'light' : 'dark';
             document.documentElement.dataset.theme = theme;
         },
 
         // Load performance state from query parameters
-        loadPerformanceState() {
+        async loadPerformanceState() {
             const params = new URLSearchParams(window.location.search);
             this.performanceSetlistId = params.get('setlistId') || null;
             const songId = params.get('songId');
             if (this.performanceSetlistId) {
-                const setlistRaw = localStorage.getItem('setlists');
-                if (setlistRaw) {
-                    const setlists = JSON.parse(setlistRaw);
-                    const setlist = setlists.find(s => s.id === this.performanceSetlistId);
-                    if (setlist) {
-                        this.performanceSongs = setlist.songs
-                            .map(id => this.songs.find(s => s.id === id))
-                            .filter(Boolean);
-                    }
+                const setlists = await DB.getAllSetlists();
+                const setlist = (setlists||[]).find(s => s.id === this.performanceSetlistId);
+                if (setlist) {
+                    this.performanceSongs = setlist.songs
+                        .map(id => this.songs.find(s => s.id === id))
+                        .filter(Boolean);
                 }
             } else {
                 this.performanceSongs = this.songs;
@@ -124,18 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastPerf.songIndex > 0 &&
                 this.performanceSongs[lastPerf.songIndex]
             ) {
-                const resume = confirm(
-                    "Resume this setlist where we left off? (Song " +
-                    (lastPerf.songIndex + 1) +
-                    ": " +
-                    (this.performanceSongs[lastPerf.songIndex]?.title || "Unknown") +
-                    ")\n\nPress OK to resume, or Cancel to start from the beginning."
+                confirmDialog(
+                  `Resume this setlist where we left off? (Song ${lastPerf.songIndex + 1}: ${this.performanceSongs[lastPerf.songIndex]?.title || 'Unknown'})`,
+                  () => { this.currentPerformanceSongIndex = lastPerf.songIndex; },
+                  () => { this.currentPerformanceSongIndex = 0; }
                 );
-                if (resume) {
-                    this.currentPerformanceSongIndex = lastPerf.songIndex;
-                } else {
-                    this.currentPerformanceSongIndex = 0;
-                }
             } else {
                 this.currentPerformanceSongIndex = 0;
             }
@@ -321,11 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Toggle theme
         handlePerformanceThemeToggle() {
-            const currentTheme = document.documentElement.dataset.theme;
-            const isDark = currentTheme.includes('dark');
-            const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
-            document.documentElement.dataset.theme = newTheme;
-            localStorage.setItem('theme', newTheme);
+            const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem('theme', next);
         },
 
         // Exit performance mode
@@ -417,6 +456,37 @@ document.addEventListener('DOMContentLoaded', () => {
             this.updateScrollButtonsVisibility();
         }
     };
+
+    // ==== SWIPE NAV ====
+    (function setupSwipeNav() {
+      const zone = document.getElementById('lyrics-display');
+      if (!zone) return;
+      let startX=0, startY=0, startTime=0, dragging=false, movedY=0, multiTouch=false, targetWasControl=false;
+      const MIN_X = 60; // px
+      const MAX_ANGLE_TAN = Math.tan(30 * Math.PI / 180);
+      const MAX_DURATION = 600; // ms
+      const MAX_PREF_SCROLL_Y = 30;
+      function isControl(el) {
+        return el.closest('.performance-controls, .font-fab, #font-controls, .auto-scroll-btn, .scroll-to-top-btn, .modal');
+      }
+      zone.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { multiTouch = true; return; }
+        multiTouch = false;
+        const t = e.touches[0];
+        startX = t.clientX; startY = t.clientY; startTime = performance.now();
+        dragging = true; movedY = 0; targetWasControl = !!isControl(e.target);
+      }, { passive: true });
+      zone.addEventListener('touchmove', (e) => {
+        if (!dragging || multiTouch) return; const t = e.touches[0]; movedY = Math.max(movedY, Math.abs(t.clientY - startY));
+      }, { passive: true });
+      zone.addEventListener('touchend', (e) => {
+        if (!dragging || multiTouch) { dragging = false; return; }
+        dragging = false; if (targetWasControl) return; const dt = performance.now() - startTime; if (dt > MAX_DURATION) return;
+        const end = e.changedTouches[0]; const dx = end.clientX - startX; const dy = end.clientY - startY;
+        if (Math.abs(dx) < MIN_X) return; if (Math.abs(dy) > Math.abs(dx) * MAX_ANGLE_TAN) return; if (movedY > MAX_PREF_SCROLL_Y) return;
+        if (dx < 0) { app.navigatePerformanceSong(1); } else { app.navigatePerformanceSong(-1); }
+      }, { passive: true });
+    })();
 
     app.init();
 });

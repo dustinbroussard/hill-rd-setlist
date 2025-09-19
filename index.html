@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="lib/idb.min.js"></script>
     <script src="lib/mammoth.browser.min.js"></script>
 </head>
 <body>
@@ -92,6 +93,56 @@
                 <button id="cancel-setlist-btn" class="btn">Cancel</button>
             </div>
         </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h2>Export</h2>
+        <div>
+          <label><input type="radio" name="export-what" value="current" checked> Current Setlist</label>
+          <label><input type="radio" name="export-what" value="all-setlists"> All Setlists</label>
+          <label><input type="radio" name="export-what" value="songs"> Songs only</label>
+          <label><input type="radio" name="export-what" value="everything"> Everything</label>
+        </div>
+        <div id="export-format-row" style="margin-top:0.6rem;">
+          <strong>Format:</strong>
+          <span id="export-format-options">
+            <label><input type="radio" name="export-format" value="json" checked> JSON</label>
+            <label><input type="radio" name="export-format" value="txt"> TXT</label>
+            <label><input type="radio" name="export-format" value="csv"> CSV</label>
+          </span>
+        </div>
+        <div class="modal-actions">
+          <button id="export-download-btn" class="btn primary">Download</button>
+          <button id="export-cancel-btn" class="btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h2>Import</h2>
+        <div>
+          <label><input type="radio" name="import-type" value="songs" checked> Import Songs</label>
+          <label><input type="radio" name="import-type" value="setlist"> Import Setlist</label>
+          <label><input type="radio" name="import-type" value="restore"> Restore (JSON backup)</label>
+        </div>
+        <div id="import-options" style="margin:0.6rem 0;">
+          <label id="songs-dup-label">Duplicates: 
+            <select id="songs-dup-mode">
+              <option value="skip" selected>Skip duplicates by title</option>
+              <option value="copy">Create copies</option>
+            </select>
+          </label>
+        </div>
+        <input type="file" id="import-file-input" multiple>
+        <div class="modal-actions">
+          <button id="import-run-btn" class="btn primary">Import</button>
+          <button id="import-cancel-btn" class="btn">Cancel</button>
+        </div>
+      </div>
     </div>
     </div>
     <script src="script.js"></script>

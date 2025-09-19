@@ -1,14 +1,100 @@
 // ==== THEME HANDLING ====
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize theme
-    const savedTheme = localStorage.getItem('theme');
-    if (!savedTheme) {
+    // Initialize theme with strict dark/light only
+    let savedTheme = localStorage.getItem('theme');
+    if (savedTheme !== 'dark' && savedTheme !== 'light') {
+        savedTheme = 'dark';
         localStorage.setItem('theme', 'dark');
-        document.documentElement.dataset.theme = 'dark';
-    } else {
-        document.documentElement.dataset.theme = savedTheme;
     }
+    document.documentElement.dataset.theme = savedTheme;
 });
+
+// ==== DB MODULE (IndexedDB via idb) ====
+/* global idb */
+const DB = (() => {
+  const DB_NAME = 'hrr-setlist-db';
+  const DB_VERSION = 1; // bump when schema changes
+  let _db;
+
+  async function open() {
+    if (_db) return _db;
+    _db = await idb.openDB(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('songs')) {
+          const songs = db.createObjectStore('songs', { keyPath: 'id' });
+          if (songs.createIndex) songs.createIndex('title', 'title', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('setlists')) {
+          const setlists = db.createObjectStore('setlists', { keyPath: 'id' });
+          if (setlists.createIndex) setlists.createIndex('name', 'name', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('meta')) {
+          db.createObjectStore('meta'); // for flags like 'migrated'
+        }
+      }
+    });
+    return _db;
+  }
+
+  async function getMeta(key) {
+    const db = await open();
+    return db.get('meta', key);
+  }
+  async function setMeta(key, val) {
+    const db = await open();
+    return db.put('meta', val, key);
+  }
+
+  // Songs
+  async function getAllSongs() {
+    const db = await open();
+    return db.getAll('songs');
+  }
+  async function putSong(song) {
+    const db = await open();
+    return db.put('songs', song);
+  }
+  async function putSongs(songs) {
+    const db = await open();
+    const tx = db.transaction('songs', 'readwrite');
+    for (const s of songs) await tx.store.put(s);
+    await tx.done;
+  }
+  async function deleteSong(id) {
+    const db = await open();
+    return db.delete('songs', id);
+  }
+  async function clearSongs() {
+    const db = await open();
+    const tx = db.transaction('songs', 'readwrite');
+    await tx.store.clear();
+    await tx.done;
+  }
+
+  // Setlists
+  async function getAllSetlists() {
+    const db = await open();
+    return db.getAll('setlists');
+  }
+  async function getSetlist(id) {
+    const db = await open();
+    return db.get('setlists', id);
+  }
+  async function putSetlist(setlist) {
+    const db = await open();
+    return db.put('setlists', setlist);
+  }
+  async function deleteSetlist(id) {
+    const db = await open();
+    return db.delete('setlists', id);
+  }
+
+  return {
+    getMeta, setMeta,
+    getAllSongs, putSong, putSongs, deleteSong, clearSongs,
+    getAllSetlists, getSetlist, putSetlist, deleteSetlist,
+  };
+})();
 
 // ==== SETLIST MANAGER MODULE 
 function normalizeSetlistName(name) {
@@ -21,25 +107,55 @@ function normalizeSetlistName(name) {
         .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// ==== TOASTS ====
+function showToast(message, type = 'success', timeout = 2500) {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type} show`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(0)';
+  });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+  }, timeout);
+}
+
+function confirmDialog(message, onYes, onNo) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Confirm</h2>
+      <p>${message}</p>
+      <div class="modal-actions">
+        <button class="btn" id="confirm-yes">Yes</button>
+        <button class="btn" id="confirm-no">No</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#confirm-yes').onclick = () => { modal.remove(); onYes && onYes(); };
+  modal.querySelector('#confirm-no').onclick = () => { modal.remove(); onNo && onNo(); };
+}
+
 const SetlistsManager = (() => {
     let setlists = new Map();
-    const DB_KEY = 'setlists';
 
-    function load() {
+    async function load() {
         try {
-            const raw = localStorage.getItem(DB_KEY);
-            if (raw) {
-                const arr = JSON.parse(raw);
-                setlists = new Map(arr.map(obj => [obj.id, obj]));
-            }
+            const arr = await DB.getAllSetlists();
+            setlists = new Map((arr || []).map(obj => [obj.id, obj]));
         } catch (error) {
+            console.error('Failed loading setlists from DB', error);
             setlists = new Map();
         }
     }
 
-    function save() {
-        localStorage.setItem(DB_KEY, JSON.stringify(Array.from(setlists.values())));
-    }
+    function save() { /* no-op; per-change writes to DB */ }
 
     function getAllSetlists() {
         return Array.from(setlists.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -70,7 +186,7 @@ const SetlistsManager = (() => {
             updatedAt: Date.now()
         };
         setlists.set(setlist.id, setlist);
-        save();
+        DB.putSetlist(setlist);
         return setlist;
     }
 
@@ -84,7 +200,7 @@ const SetlistsManager = (() => {
             if (existing) throw new Error(`A setlist named "${normalized}" already exists`);
             setlist.name = newName.trim();
             setlist.updatedAt = Date.now();
-            save();
+            DB.putSetlist(setlist);
             return setlist;
         }
         return null;
@@ -98,7 +214,7 @@ const SetlistsManager = (() => {
 
     function deleteSetlist(id) {
         const deleted = setlists.delete(id);
-        if (deleted) save();
+        if (deleted) DB.deleteSetlist(id);
         return deleted;
     }
 
@@ -107,7 +223,7 @@ const SetlistsManager = (() => {
         if (setlist) {
             setlist.songs = [...songIds];
             setlist.updatedAt = Date.now();
-            save();
+            DB.putSetlist(setlist);
             return setlist;
         }
         return null;
@@ -118,7 +234,7 @@ const SetlistsManager = (() => {
         if (setlist && !setlist.songs.includes(songId)) {
             setlist.songs.push(songId);
             setlist.updatedAt = Date.now();
-            save();
+            DB.putSetlist(setlist);
             return setlist;
         }
         return null;
@@ -131,7 +247,7 @@ const SetlistsManager = (() => {
             if (index > -1) {
                 setlist.songs.splice(index, 1);
                 setlist.updatedAt = Date.now();
-                save();
+                DB.putSetlist(setlist);
                 return setlist;
             }
         }
@@ -148,17 +264,14 @@ const SetlistsManager = (() => {
         [setlist.songs[currentIndex], setlist.songs[newIndex]] = 
         [setlist.songs[newIndex], setlist.songs[currentIndex]];
         setlist.updatedAt = Date.now();
-        save();
+        DB.putSetlist(setlist);
         return setlist;
     }
 
    function importSetlistFromText(name, text, allSongs) {
     // Normalize and trim setlist name
     const normalizedName = name.trim();
-    if (!normalizedName) {
-        alert("Setlist name cannot be empty.");
-        return null;
-    }
+    if (!normalizedName) { showToast('Setlist name cannot be empty.', 'error'); return null; }
 
     // Use Fuse for fuzzy matching
     const fuse = new Fuse(allSongs, {
@@ -184,24 +297,16 @@ const SetlistsManager = (() => {
         }
     });
 
-    if (songIds.length === 0) {
-        alert("No matching songs found to import.");
-        return null;
-    }
+    if (songIds.length === 0) { showToast('No matching songs found to import.', 'info'); return null; }
 
     // Add setlist with fuzzy matched songs
     let setlist;
     try {
         setlist = SetlistsManager.addSetlist(normalizedName, songIds);
-    } catch (err) {
-        alert(err.message || "Failed to create setlist.");
-        return null;
-    }
+    } catch (err) { showToast(err.message || 'Failed to create setlist.', 'error'); return null; }
 
     // Notify user of any missing songs
-    if (notFound.length > 0) {
-        alert(`The following songs were not found and were not imported:\n- ${notFound.join('\n- ')}`);
-    }
+    if (notFound.length > 0) { showToast(`${notFound.length} titles not found.`, 'info', 3500); }
 
     return { setlist, imported: songIds.length, notFound };
 }
@@ -229,7 +334,7 @@ const SetlistsManager = (() => {
         }
     }
 
-    load();
+    // initial load triggered by app.init()
 
     return {
         getAllSetlists,
@@ -250,6 +355,27 @@ const SetlistsManager = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+    async function migrateIfNeeded() {
+        try {
+            const migrated = await DB.getMeta('migrated');
+            if (migrated === true) return;
+            const songsRaw = localStorage.getItem('songs');
+            const setlistsRaw = localStorage.getItem('setlists');
+            const songs = songsRaw ? JSON.parse(songsRaw) : [];
+            const setlists = setlistsRaw ? JSON.parse(setlistsRaw) : [];
+            if (songs && songs.length) {
+                await DB.putSongs(songs);
+            }
+            if (setlists && setlists.length) {
+                for (const s of setlists) await DB.putSetlist(s);
+            }
+            localStorage.removeItem('songs');
+            localStorage.removeItem('setlists');
+            await DB.setMeta('migrated', true);
+        } catch (e) {
+            console.error('Migration failed', e);
+        }
+    }
     const app = {
         normalizeTitle(title) {
             let t = title.replace(/\.[^/.]+$/, '');
@@ -303,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabToolbars: {
             songs: `
                 <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
+                <button id="song-voice-btn" class="icon-btn" title="Voice search"><i class="fas fa-microphone"></i></button>
                 <div class="toolbar-buttons-group">
                     <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i></button>
                     <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i></button>
@@ -325,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
             performance: `
                 <select id="performance-setlist-select" class="setlist-select"></select>
                 <input type="text" id="performance-song-search" class="search-input" placeholder="Find any song...">
+                <button id="performance-voice-btn" class="icon-btn" title="Voice search"><i class="fas fa-microphone"></i></button>
                 <button id="start-performance-btn" class="btn primary"><i class="fas fa-play"></i> Start</button>
             `
         },
@@ -334,6 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSongId: null,
         currentSetlistId: null,
         performanceSetlistId: null,
+        activeRecognition: null,
         modalMode: null,
         sortableSetlist: null,
         lastPerformance: null,
@@ -344,6 +473,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!toolbarDiv) {
                 console.error('Tab toolbar element not found');
                 return;
+            }
+            // Stop any active speech recognition when switching toolbars
+            if (this.activeRecognition && typeof this.activeRecognition.stop === 'function') {
+                try { this.activeRecognition.stop(); } catch {}
+                this.activeRecognition = null;
             }
             toolbarDiv.innerHTML = this.tabToolbars[tab] || '';
             
@@ -359,13 +493,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.songUploadInput = document.getElementById('song-upload-input');
 
                 this.songSearchInput.addEventListener('input', () => this.renderSongs());
+                const songVoiceBtn = document.getElementById('song-voice-btn');
+                this.setupSpeechToText(this.songSearchInput, songVoiceBtn, () => this.renderSongs());
                 this.addSongBtn.addEventListener('click', () => this.openSongModal());
                 this.deleteAllSongsBtn.addEventListener('click', () => {
-                    if (confirm('Delete ALL songs? This cannot be undone!')) {
+                    confirmDialog('Delete ALL songs? This cannot be undone!', async () => {
                         this.songs = [];
-                        this.saveData();
+                        try { await DB.clearSongs(); } catch {}
+                        await this.saveData();
                         this.renderSongs();
-                    }
+                        showToast('Deleted all songs.', 'success');
+                    });
                 });
                 this.songUploadInput.addEventListener('change', (e) => this.handleFileUpload(e));
             } else if (tab === 'setlists') {
@@ -380,55 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.duplicateSetlistBtn.addEventListener('click', () => this.handleDuplicateSetlist());
                 this.deleteSetlistBtn.addEventListener('click', () => this.handleDeleteSetlist());
                 document.getElementById('import-setlist-btn').addEventListener('click', () => {
-                    document.getElementById('import-setlist-file').click();
+                    const m = document.getElementById('import-modal');
+                    if (m) m.style.display = 'flex';
                 });
                 document.getElementById('export-setlist-btn').addEventListener('click', () => {
-                    if (!this.currentSetlistId) {
-                        alert("No setlist selected!");
-                        return;
-                    }
-                    const format = prompt("Export format? (json/txt/csv)", "json");
-                    if (!format) return;
-                    const content = SetlistsManager.exportSetlist(
-                        this.currentSetlistId,
-                        this.songs,
-                        format.trim().toLowerCase()
-                    );
-                    if (content) {
-                        let ext = format === "csv" ? "csv" : format === "txt" ? "txt" : "json";
-                        const setlist = SetlistsManager.getSetlistById(this.currentSetlistId);
-                        const name = setlist ? setlist.name.replace(/\s+/g, "_") : "setlist";
-                        this.downloadFile(`${name}.${ext}`, content,
-                            ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : "text/plain"
-                        );
-                    } else {
-                        alert("Export failed.");
-                    }
-                });
-                document.getElementById('import-setlist-file').addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        let text = event.target.result;
-                        let setlistName = prompt("Setlist name?", file.name.replace(/\.[^/.]+$/, ''));
-                        if (!setlistName) return;
-                        if (file.name.endsWith('.docx')) {
-                            mammoth.extractRawText({ arrayBuffer: event.target.result })
-                                .then(result => {
-                                    text = result.value;
-                                    finishImportSetlist(setlistName, text);
-                                });
-                        } else {
-                            finishImportSetlist(setlistName, text);
-                        }
-                    };
-                    if (file.name.endsWith('.docx')) {
-                        reader.readAsArrayBuffer(file);
-                    } else {
-                        reader.readAsText(file);
-                    }
-                    e.target.value = '';
+                    const m = document.getElementById('export-modal');
+                    if (m) m.style.display = 'flex';
+                    this.updateExportFormatOptions();
                 });
             } else if (tab === 'performance') {
                 this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
@@ -436,17 +532,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.startPerformanceBtn = document.getElementById('start-performance-btn');
                 this.performanceSetlistSelect.addEventListener('change', () => this.handlePerformanceSetlistChange());
                 this.performanceSongSearch.addEventListener('input', () => this.handlePerformanceSongSearch());
+                const perfVoiceBtn = document.getElementById('performance-voice-btn');
+                this.setupSpeechToText(this.performanceSongSearch, perfVoiceBtn, () => this.handlePerformanceSongSearch());
                 this.startPerformanceBtn.addEventListener('click', () => this.handleStartPerformance());
             }
         },
 
+        // Attach speech-to-text to an input + button pair
+        setupSpeechToText(inputEl, btnEl, onChange) {
+            if (!inputEl || !btnEl) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { btnEl.style.display = 'none'; return; }
+
+            const recognition = new SR();
+            recognition.lang = navigator.language || 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            let finalTranscript = '';
+
+            const setActive = (active) => {
+                btnEl.classList.toggle('recording', !!active);
+            };
+
+            recognition.onstart = () => {
+                this.activeRecognition = recognition;
+                finalTranscript = '';
+                setActive(true);
+            };
+            recognition.onerror = () => {
+                setActive(false);
+            };
+            recognition.onend = () => {
+                setActive(false);
+                if (this.activeRecognition === recognition) this.activeRecognition = null;
+            };
+            recognition.onresult = (event) => {
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const res = event.results[i];
+                    if (res.isFinal) finalTranscript += res[0].transcript;
+                    else interim += res[0].transcript;
+                }
+                const value = (finalTranscript || interim).trim();
+                if (value) {
+                    inputEl.value = value;
+                    if (typeof onChange === 'function') onChange();
+                    else inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+
+            btnEl.addEventListener('click', () => {
+                // Toggle recognition; ensure we stop other active instance
+                if (this.activeRecognition && this.activeRecognition !== recognition) {
+                    try { this.activeRecognition.stop(); } catch {}
+                    this.activeRecognition = null;
+                }
+                try {
+                    if (btnEl.classList.contains('recording')) recognition.stop();
+                    else recognition.start();
+                } catch (e) {
+                    // Some browsers may throw if called too quickly
+                }
+            });
+        },
+
         // Core App Initialization
-        init() {
+        async init() {
+            await migrateIfNeeded();
             this.loadData();
             this.renderToolbar('songs');
             this.setlistSelect = document.getElementById('setlist-select');
             this.performanceSetlistSelect = document.getElementById('performance-setlist-select');
             this.setupEventListeners();
+            // Load from IDB
+            try {
+                this.songs = await DB.getAllSongs();
+            } catch (e) {
+                console.error('Failed to load songs from DB', e);
+                this.songs = [];
+            }
+            await SetlistsManager.load();
             this.renderSongs();
             if (this.setlistSelect && this.performanceSetlistSelect) {
                 this.renderSetlists();
@@ -457,12 +624,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Data Management
         loadData() {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
-            const theme = localStorage.getItem('theme') || 'dark';
+            const theme = (localStorage.getItem('theme') === 'light') ? 'light' : 'dark';
             document.documentElement.dataset.theme = theme;
         },
 
-        saveData() {
-            localStorage.setItem('songs', JSON.stringify(this.songs));
+        async saveData() {
+            // Bulk write as a fallback for places still calling saveData
+            try { await DB.putSongs(this.songs); } catch (e) { console.error('saveData failed', e); }
         },
 
         // Lyrics Management
@@ -474,14 +642,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return this.songs.find(song => song.id === id);
         },
 
-        addLyric(song) {
+        async addLyric(song) {
             this.songs.push(song);
-            this.saveData();
+            try { await DB.putSong(song); } catch (e) { console.error('putSong failed', e); }
+            await this.saveData();
         },
 
-        removeLyric(id) {
+        async removeLyric(id) {
             this.songs = this.songs.filter(song => song.id !== id);
-            this.saveData();
+            try { await DB.deleteSong(id); } catch (e) { console.error('deleteSong failed', e); }
+            await this.saveData();
         },
 
         searchLyrics(query) {
@@ -534,12 +704,567 @@ document.addEventListener('DOMContentLoaded', () => {
             this.performanceSongList.addEventListener('click', (e) => this.handlePerformanceSongClick(e));
             // Add theme toggle button handler
             document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
-                const currentTheme = document.documentElement.dataset.theme;
-                const isDark = currentTheme.includes('dark');
-                const newTheme = isDark ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark');
-                document.documentElement.dataset.theme = newTheme;
-                localStorage.setItem('theme', newTheme);
+                const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.dataset.theme = next;
+                localStorage.setItem('theme', next);
             });
+
+            // Export modal controls
+            const exportModal = document.getElementById('export-modal');
+            if (exportModal) {
+                exportModal.addEventListener('click', (e)=>{ if (e.target === exportModal) exportModal.style.display='none'; });
+                document.getElementById('export-cancel-btn')?.addEventListener('click', ()=> exportModal.style.display='none');
+                document.querySelectorAll('input[name="export-what"]').forEach(r=> r.addEventListener('change', ()=> this.updateExportFormatOptions()));
+                document.getElementById('export-download-btn')?.addEventListener('click', ()=> this.handleExportDownload());
+            }
+
+            // Import modal controls
+            const importModal = document.getElementById('import-modal');
+            if (importModal) {
+                importModal.addEventListener('click', (e)=>{ if (e.target === importModal) importModal.style.display='none'; });
+                document.getElementById('import-cancel-btn')?.addEventListener('click', ()=> importModal.style.display='none');
+                document.getElementById('import-run-btn')?.addEventListener('click', ()=> this.handleImportRun());
+                document.querySelectorAll('input[name="import-type"]').forEach(r=> r.addEventListener('change', ()=> this.updateImportOptionsVisibility()));
+                this.updateImportOptionsVisibility();
+            }
+        },
+
+        updateExportFormatOptions() {
+            const what = (document.querySelector('input[name="export-what"]:checked')?.value)||'current';
+            const options = document.getElementById('export-format-options');
+            if (!options) return;
+            if (what === 'everything') {
+                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label>';
+            } else if (what === 'songs') {
+                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label> <label><input type="radio" name="export-format" value="csv"> CSV</label> <label><input type="radio" name="export-format" value="txt"> TXT (one file)</label> <label><input type="radio" name="export-format" value="txt-separate"> TXT (separate files)</label> <label><input type="radio" name="export-format" value="pdf"> PDF</label>';
+            } else {
+                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label> <label><input type="radio" name="export-format" value="txt"> TXT list</label> <label><input type="radio" name="export-format" value="pdf"> PDF</label>';
+            }
+        },
+
+        handleExportDownload() {
+            const what = (document.querySelector('input[name="export-what"]:checked')?.value)||'current';
+            const format = (document.querySelector('input[name="export-format"]:checked')?.value)||'json';
+            try {
+                if (what === 'everything') {
+                    const blob = this.exportEverything();
+                    this.downloadFile('setlist-backup.json', blob, 'application/json');
+                } else if (what === 'songs') {
+                    if (format === 'pdf') {
+                        this.exportSongsPDF();
+                    } else if (format === 'txt-separate') {
+                        this.exportSongsAsSeparateTxt();
+                    } else {
+                        const { content, mime, ext } = this.exportSongs({ format });
+                        this.downloadFile(`songs.${ext}`, content, mime);
+                    }
+                } else {
+                    if (format === 'pdf') {
+                        this.exportSetlistsPDF({ which: what });
+                    } else {
+                        const { content, mime, ext, name } = this.exportSetlists({ which: what, format });
+                        this.downloadFile(`${name}.${ext}`, content, mime);
+                    }
+                }
+                showToast('Export ready.', 'success');
+                const m = document.getElementById('export-modal'); if (m) m.style.display='none';
+            } catch (e) {
+                console.error(e); showToast('Export failed.', 'error');
+            }
+        },
+
+        // Export songs to a print-friendly PDF with per-page autofit
+        exportSongsPDF() {
+            const songs = this.songs.slice();
+            const escapeHTML = (s) => String(s||'')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            const htmlParts = [];
+            htmlParts.push(`<!DOCTYPE html><html><head><meta charset="utf-8">`);
+            htmlParts.push(`<title>Songs - PDF</title>`);
+            htmlParts.push(`<style>
+                @page { size: A4; margin: 0.75in; }
+                html, body { height: 100%; }
+                body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; }
+                /* Fixed-height page area: page height minus margins */
+                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 1.5in); text-align: center; box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; }
+                .song:last-child { page-break-after: auto; }
+                h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.6em; }
+                .lyrics { font-size: 1em; white-space: pre-wrap; line-height: 1.4; }
+                /* On screen, add some padding */
+                @media screen { body { background:#f5f5f5; } .song { box-sizing: border-box; width: 8.27in; height: 11.69in; margin: 12px auto; background:#fff; border: 1px solid #ddd; padding: 0.75in; } }
+            </style></head><body>`);
+            for (const s of songs) {
+                const title = escapeHTML(s.title || 'Untitled');
+                const lyrics = escapeHTML(s.lyrics || '');
+                htmlParts.push(`<section class="song"><h1>${title}</h1><div class="lyrics">${lyrics}</div></section>`);
+            }
+            // Inject autofit + auto-print logic
+            htmlParts.push(`<script>
+              (function(){
+                function fits(page, sizePt){
+                  page.style.fontSize = sizePt + 'pt';
+                  // force reflow
+                  void page.offsetHeight;
+                  return page.scrollHeight <= page.clientHeight + 0.5;
+                }
+                function fitPage(page){
+                  let low = 8, high = 28;
+                  if (fits(page, high)){
+                    let next = high;
+                    for (let i=0; i<12; i++){
+                      next = Math.min(next * 1.25, 96);
+                      if (fits(page, next)) { low = next; high = Math.min(next * 1.25, 96); }
+                      else { high = next; break; }
+                    }
+                  } else {
+                    while (!fits(page, high) && high > 6) high -= 2;
+                    low = Math.max(6, high - 2);
+                  }
+                  for (let i=0; i<14; i++){
+                    const mid = (low + high) / 2;
+                    if (fits(page, mid)) low = mid; else high = mid;
+                  }
+                  page.style.fontSize = low + 'pt';
+                }
+                function fitAll(){
+                  const pages = document.querySelectorAll('.song');
+                  pages.forEach(p => { p.style.fontSize = '14pt'; });
+                  requestAnimationFrame(() => {
+                    pages.forEach(p => fitPage(p));
+                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 100);
+                  });
+                }
+                if (document.readyState === 'complete') fitAll();
+                else window.addEventListener('load', fitAll);
+              })();
+            </script>`);
+            htmlParts.push(`</body></html>`);
+            const html = htmlParts.join('');
+
+            const win = window.open('', '_blank');
+            if (!win) { alert('Popup blocked: allow popups to export PDF.'); return; }
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            // Printing will be triggered by the injected script after autofit.
+        },
+
+        exportSongs({ format }) {
+            const songs = this.songs.slice();
+            if (format === 'json') return { content: JSON.stringify(songs, null, 2), mime: 'application/json', ext: 'json' };
+            if (format === 'csv') {
+                const header = 'Title,Lyrics\n';
+                const esc = (s)=> '"'+String(s||'').replace(/"/g,'""')+'"';
+                const rows = songs.map(s=> `${esc(s.title)},${esc(s.lyrics)}`).join('\n');
+                return { content: header+rows, mime: 'text/csv', ext: 'csv' };
+            }
+            // txt concatenation
+            const txt = songs.map(s=> `${s.title}\n\n${s.lyrics}`).join('\n\n-----\n\n');
+            return { content: txt, mime: 'text/plain', ext: 'txt' };
+        },
+
+        exportSetlists({ which, format }) {
+            const all = SetlistsManager.getAllSetlists();
+            const current = which === 'current' ? all.find(s=> s.id === this.currentSetlistId) : null;
+            if (which === 'current' && !current) throw new Error('No setlist selected');
+            const setlists = which === 'current' ? [current] : all;
+            if (format === 'json') {
+                const data = setlists.map(sl=> ({ setlist: sl, songs: sl.songs.map(id=> this.songs.find(s=> s.id===id)).filter(Boolean) }));
+                const name = which === 'current' ? (current.name || 'setlist') : 'setlists';
+                return { content: JSON.stringify(data, null, 2), mime: 'application/json', ext: 'json', name: name.replace(/\s+/g,'_') };
+            }
+            // txt list of titles
+            const content = setlists.map(sl=> `# ${sl.name}\n` + sl.songs.map(id=> (this.songs.find(s=> s.id===id)?.title)||'').filter(Boolean).join('\n')).join('\n\n');
+            const name = which === 'current' ? (current.name || 'setlist') : 'setlists';
+            return { content, mime: 'text/plain', ext: 'txt', name: name.replace(/\s+/g,'_') };
+        },
+
+        exportEverything() {
+            const setlists = SetlistsManager.getAllSetlists();
+            const data = { songs: this.songs, setlists };
+            return JSON.stringify(data, null, 2);
+        },
+
+        // Export songs as separate .txt files (bundled into a ZIP)
+        exportSongsAsSeparateTxt() {
+            const sanitizeFilename = (name) => {
+                const base = String(name || 'Untitled').replace(/[\\/:*?"<>|]+/g, '').trim().replace(/\s+/g, '_');
+                return base.slice(0, 80) || 'song';
+            };
+            const encoder = new TextEncoder();
+            const files = this.songs.map(s => {
+                const title = s.title || 'Untitled';
+                const text = `${title}\n\n${s.lyrics || ''}`;
+                return { name: sanitizeFilename(title) + '.txt', bytes: encoder.encode(text) };
+            });
+            const blob = this._buildZipFromFiles(files);
+            this.downloadFile('songs_txt_bundle.zip', blob, 'application/zip');
+        },
+
+        // Minimal ZIP builder (store mode, no compression)
+        _buildZipFromFiles(files) {
+            const makeUint8 = (len) => new Uint8Array(len);
+            const writeU16 = (arr, off, val) => { arr[off] = val & 0xff; arr[off+1] = (val >>> 8) & 0xff; };
+            const writeU32 = (arr, off, val) => { arr[off] = val & 0xff; arr[off+1] = (val >>> 8) & 0xff; arr[off+2] = (val >>> 16) & 0xff; arr[off+3] = (val >>> 24) & 0xff; };
+            const dosDateTime = (d) => {
+                const year = d.getFullYear();
+                const month = d.getMonth() + 1; // 1-12
+                const day = d.getDate();
+                const hours = d.getHours();
+                const minutes = d.getMinutes();
+                const seconds = Math.floor(d.getSeconds() / 2);
+                const dt = ((year - 1980) << 9) | (month << 5) | day;
+                const tm = (hours << 11) | (minutes << 5) | seconds;
+                return { dt, tm };
+            };
+            // CRC32 table
+            const crcTable = (() => {
+                const table = new Uint32Array(256);
+                for (let n = 0; n < 256; n++) {
+                    let c = n;
+                    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+                    table[n] = c >>> 0;
+                }
+                return table;
+            })();
+            const crc32 = (bytes) => {
+                let c = 0xffffffff;
+                for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+                return (c ^ 0xffffffff) >>> 0;
+            };
+
+            const parts = [];
+            const central = [];
+            let offset = 0;
+            const now = new Date();
+            const { dt, tm } = dosDateTime(now);
+            for (const f of files) {
+                const nameBytes = new TextEncoder().encode(f.name);
+                const data = f.bytes instanceof Uint8Array ? f.bytes : new Uint8Array(f.bytes);
+                const crc = crc32(data);
+                // Local file header
+                const lf = makeUint8(30 + nameBytes.length);
+                writeU32(lf, 0, 0x04034b50);
+                writeU16(lf, 4, 20); // version needed
+                writeU16(lf, 6, 0);  // flags
+                writeU16(lf, 8, 0);  // compression (0=store)
+                writeU16(lf, 10, tm);
+                writeU16(lf, 12, dt);
+                writeU32(lf, 14, crc);
+                writeU32(lf, 18, data.length);
+                writeU32(lf, 22, data.length);
+                writeU16(lf, 26, nameBytes.length);
+                writeU16(lf, 28, 0); // extra len
+                lf.set(nameBytes, 30);
+                parts.push(lf, data);
+                const localOffset = offset;
+                offset += lf.length + data.length;
+                // Central directory header
+                const cf = makeUint8(46 + nameBytes.length);
+                writeU32(cf, 0, 0x02014b50);
+                writeU16(cf, 4, 20); // version made by
+                writeU16(cf, 6, 20); // version needed
+                writeU16(cf, 8, 0);  // flags
+                writeU16(cf, 10, 0); // compression
+                writeU16(cf, 12, tm);
+                writeU16(cf, 14, dt);
+                writeU32(cf, 16, crc);
+                writeU32(cf, 20, data.length);
+                writeU32(cf, 24, data.length);
+                writeU16(cf, 28, nameBytes.length);
+                writeU16(cf, 30, 0); // extra len
+                writeU16(cf, 32, 0); // comment len
+                writeU16(cf, 34, 0); // disk number
+                writeU16(cf, 36, 0); // internal attrs
+                writeU32(cf, 38, 0); // external attrs
+                writeU32(cf, 42, localOffset);
+                cf.set(nameBytes, 46);
+                central.push(cf);
+            }
+            const centralStart = offset;
+            for (const c of central) { parts.push(c); offset += c.length; }
+            const centralSize = offset - centralStart;
+            // End of central directory
+            const eocd = makeUint8(22);
+            writeU32(eocd, 0, 0x06054b50);
+            writeU16(eocd, 4, 0); // disk
+            writeU16(eocd, 6, 0); // start disk
+            writeU16(eocd, 8, files.length);
+            writeU16(eocd, 10, files.length);
+            writeU32(eocd, 12, centralSize);
+            writeU32(eocd, 16, centralStart);
+            writeU16(eocd, 20, 0); // comment len
+            parts.push(eocd);
+            return new Blob(parts, { type: 'application/zip' });
+        },
+
+        // Export current/all setlists to a print-friendly PDF with per-page autofit
+        exportSetlistsPDF({ which }) {
+            const all = SetlistsManager.getAllSetlists();
+            const current = which === 'current' ? all.find(s=> s.id === this.currentSetlistId) : null;
+            if (which === 'current' && !current) { alert('No setlist selected.'); return; }
+            const setlists = which === 'current' ? [current] : all;
+
+            const songsInOrder = [];
+            for (const sl of setlists) {
+                for (const id of sl.songs) {
+                    const song = this.songs.find(s=> s.id === id);
+                    if (song) songsInOrder.push(song);
+                }
+            }
+
+            const escapeHTML = (s) => String(s||'')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            const htmlParts = [];
+            htmlParts.push(`<!DOCTYPE html><html><head><meta charset="utf-8">`);
+            const titleBase = which === 'current' ? (current?.name || 'Setlist') : 'All Setlists';
+            htmlParts.push(`<title>${escapeHTML(titleBase)} - PDF</title>`);
+            htmlParts.push(`<style>
+                @page { size: A4; margin: 0.75in; }
+                html, body { height: 100%; }
+                body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; }
+                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 1.5in); text-align: center; box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; }
+                .song:last-child { page-break-after: auto; }
+                h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.6em; }
+                .lyrics { font-size: 1em; white-space: pre-wrap; line-height: 1.4; }
+                @media screen { body { background:#f5f5f5; } .song { box-sizing: border-box; width: 8.27in; height: 11.69in; margin: 12px auto; background:#fff; border: 1px solid #ddd; padding: 0.75in; } }
+            </style></head><body>`);
+            for (const s of songsInOrder) {
+                const title = escapeHTML(s.title || 'Untitled');
+                const lyrics = escapeHTML(s.lyrics || '');
+                htmlParts.push(`<section class="song"><h1>${title}</h1><div class="lyrics">${lyrics}</div></section>`);
+            }
+            htmlParts.push(`<script>
+              (function(){
+                function fits(page, sizePt){
+                  page.style.fontSize = sizePt + 'pt';
+                  void page.offsetHeight;
+                  return page.scrollHeight <= page.clientHeight + 0.5;
+                }
+                function fitPage(page){
+                  let low = 8, high = 28;
+                  if (fits(page, high)){
+                    let next = high;
+                    for (let i=0; i<12; i++){
+                      next = Math.min(next * 1.25, 96);
+                      if (fits(page, next)) { low = next; high = Math.min(next * 1.25, 96); }
+                      else { high = next; break; }
+                    }
+                  } else {
+                    while (!fits(page, high) && high > 6) high -= 2;
+                    low = Math.max(6, high - 2);
+                  }
+                  for (let i=0; i<14; i++){
+                    const mid = (low + high) / 2;
+                    if (fits(page, mid)) low = mid; else high = mid;
+                  }
+                  page.style.fontSize = low + 'pt';
+                }
+                function fitAll(){
+                  const pages = document.querySelectorAll('.song');
+                  pages.forEach(p => { p.style.fontSize = '14pt'; });
+                  requestAnimationFrame(() => {
+                    pages.forEach(p => fitPage(p));
+                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 100);
+                  });
+                }
+                if (document.readyState === 'complete') fitAll();
+                else window.addEventListener('load', fitAll);
+              })();
+            </script>`);
+            htmlParts.push(`</body></html>`);
+            const html = htmlParts.join('');
+
+            const win = window.open('', '_blank');
+            if (!win) { alert('Popup blocked: allow popups to export PDF.'); return; }
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            // Printing will be triggered by the injected script after autofit.
+        },
+
+        updateImportOptionsVisibility() {
+            const type = (document.querySelector('input[name="import-type"]:checked')?.value)||'songs';
+            const dup = document.getElementById('songs-dup-label');
+            if (dup) dup.style.display = type === 'songs' ? 'block' : 'none';
+        },
+
+        async handleImportRun() {
+            const type = (document.querySelector('input[name="import-type"]:checked')?.value)||'songs';
+            const filesInput = document.getElementById('import-file-input');
+            const files = filesInput?.files;
+            if (!files || !files.length) { showToast('Choose file(s) to import', 'info'); return; }
+            try {
+                if (type === 'songs') {
+                    const mode = document.getElementById('songs-dup-mode')?.value || 'skip';
+                    const result = await this.importSongs(files, mode);
+                    showToast(`Imported ${result.added} songs (${result.skipped} skipped).`, 'success');
+                } else if (type === 'setlist') {
+                    const result = await this.importSetlistFiles(files);
+                    if (result && result.setlist) {
+                        this.currentSetlistId = result.setlist.id;
+                        this.renderSetlists();
+                    }
+                } else {
+                    const result = await this.restoreFromJSON(files[0]);
+                    if (result) {
+                        this.songs = await DB.getAllSongs();
+                        await SetlistsManager.load();
+                        this.renderSongs();
+                        this.renderSetlists();
+                        showToast('Restore complete.', 'success');
+                    }
+                }
+                const m = document.getElementById('import-modal'); if (m) m.style.display='none';
+                filesInput.value = '';
+            } catch (e) { console.error(e); showToast('Import failed.', 'error'); }
+        },
+
+        async importSongs(fileList, dupMode) {
+            let added=0, skipped=0;
+            const titleKey = (s)=> (s.title||'').trim().toLowerCase();
+            const existing = new Map(this.songs.map(s=> [titleKey(s), 1]));
+            const ensureUniqueTitle = (t)=>{
+                if (dupMode === 'copy') {
+                    let base=t, n=1; let cand=base;
+                    while (existing.has(cand.trim().toLowerCase())) { n++; cand = `${base} (Copy ${n})`; }
+                    return cand;
+                }
+                return t;
+            };
+            const addOne = async (song)=>{
+                const key = titleKey(song);
+                if (existing.has(key) && dupMode==='skip') { skipped++; return; }
+                const title = ensureUniqueTitle(song.title||'Untitled');
+                const s = { id: song.id || (Date.now().toString()+Math.random().toString(16).slice(2)), title, lyrics: song.lyrics||'' };
+                this.songs.push(s); existing.set(title.trim().toLowerCase(),1); added++;
+                await DB.putSong(s);
+            };
+            for (const file of fileList) {
+                if (/\.json$/i.test(file.name)) {
+                    const text = await file.text();
+                    const arr = JSON.parse(text);
+                    for (const s of arr) await addOne(s);
+                } else if (/\.csv$/i.test(file.name)) {
+                    const text = await file.text();
+                    const rows = this.parseCSV(text);
+                    for (let i=1;i<rows.length;i++){ const [Title, Lyrics] = rows[i]; if (!Title) continue; await addOne({ title: Title, lyrics: Lyrics||'' }); }
+                } else if (/\.txt$/i.test(file.name)) {
+                    const text = await file.text();
+                    const title = this.normalizeTitle(file.name);
+                    await addOne({ title, lyrics: text });
+                } else if (/\.docx$/i.test(file.name)) {
+                    const buf = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+                    const title = this.normalizeTitle(file.name);
+                    await addOne({ title, lyrics: result.value });
+                }
+            }
+            await this.saveData();
+            this.renderSongs();
+            return { added, skipped };
+        },
+
+        async importSetlistFiles(fileList) {
+            const file = fileList[0]; if (!file) return null;
+            if (/\.json$/i.test(file.name)) {
+                const text = await file.text();
+                const obj = JSON.parse(text);
+                if (Array.isArray(obj)) {
+                    // array of { setlist, songs }
+                    let last=null;
+                    for (const entry of obj) {
+                        const { setlist, songs } = entry;
+                        if (songs && songs.length) await this.mergeSongsByTitle(songs, 'skip');
+                        last = SetlistsManager.addSetlist(setlist.name, (setlist.songs||[]).filter(Boolean));
+                    }
+                    return { setlist: last };
+                } else if (obj && obj.setlist) {
+                    if (obj.songs && obj.songs.length) await this.mergeSongsByTitle(obj.songs, 'skip');
+                    const sl = SetlistsManager.addSetlist(obj.setlist.name, (obj.setlist.songs||[]).filter(Boolean));
+                    return { setlist: sl };
+                }
+                return null;
+            }
+            // txt/docx flow with fuzzy matching
+            if (/\.docx$/i.test(file.name)) {
+                const buf = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer: buf });
+                return finishImportSetlist(file.name.replace(/\.[^/.]+$/, ''), result.value);
+            } else {
+                const text = await file.text();
+                return finishImportSetlist(file.name.replace(/\.[^/.]+$/, ''), text);
+            }
+        },
+
+        async restoreFromJSON(file) {
+            const text = await file.text();
+            const obj = JSON.parse(text);
+            if (!obj || (!Array.isArray(obj.songs) && !Array.isArray(obj.setlists))) return false;
+            if (Array.isArray(obj.songs)) {
+                await this.mergeSongsByTitle(obj.songs, 'skip');
+            }
+            if (Array.isArray(obj.setlists)) {
+                for (const s of obj.setlists) {
+                    // de-dup setlist names
+                    let name = s.name?.trim() || 'Imported';
+                    const existing = SetlistsManager.getAllSetlists().map(x=>x.name.toLowerCase());
+                    let base=name, n=1; while (existing.includes(name.toLowerCase())) { name = `${base} (Imported ${n++})`; }
+                    const sl = { id: s.id || (Date.now().toString()+Math.random().toString(16).slice(2)), name, songs: (s.songs||[]).filter(Boolean), createdAt: Date.now(), updatedAt: Date.now() };
+                    await DB.putSetlist(sl);
+                }
+                await SetlistsManager.load();
+            }
+            return true;
+        },
+
+        async mergeSongsByTitle(incoming, dupMode) {
+            const titleKey = (s)=> (s.title||'').trim().toLowerCase();
+            const existing = new Map(this.songs.map(s=> [titleKey(s), s]));
+            for (const s of incoming) {
+                const k = titleKey(s);
+                if (existing.has(k) && dupMode==='skip') continue;
+                let title = s.title || 'Untitled';
+                if (existing.has(k) && dupMode==='copy') {
+                    let base=title, n=1; let cand=base;
+                    while (existing.has(cand.trim().toLowerCase())) { n++; cand = `${base} (Copy ${n})`; }
+                    title = cand;
+                }
+                const song = { id: s.id || (Date.now().toString()+Math.random().toString(16).slice(2)), title, lyrics: s.lyrics||'' };
+                this.songs.push(song); existing.set(title.trim().toLowerCase(), song);
+                await DB.putSong(song);
+            }
+            await this.saveData();
+        },
+
+        parseCSV(text) {
+            const rows = [];
+            let i=0, field='', row=[], inq=false; const push=()=>{ row.push(field); field=''; };
+            while (i<text.length){
+                const c=text[i++];
+                if (inq){
+                    if (c==='"'){ if (text[i]==='"'){ field+='"'; i++; } else { inq=false; } }
+                    else field+=c;
+                } else {
+                    if (c===','){ push(); }
+                    else if (c==='\n'){ push(); rows.push(row); row=[]; }
+                    else if (c==='\r'){ /* ignore */ }
+                    else if (c==='"'){ inq=true; }
+                    else field+=c;
+                }
+            }
+            push(); rows.push(row); return rows;
         },
 
         // Song UI and Actions
@@ -591,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.songModal.style.display = 'none';
         },
 
-        saveSong() {
+        async saveSong() {
             const title = this.normalizeTitle(this.songTitleInput.value.trim());
             const lyrics = this.songLyricsInput.value.trim();
             if (!title) return;
@@ -599,31 +1324,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const song = this.songs.find(s => s.id === this.currentSongId);
                 song.title = title;
                 song.lyrics = lyrics;
+                try { await DB.putSong(song); } catch (e) {}
             } else {
                 if (this.isDuplicateTitle(title)) {
                     this.closeSongModal();
                     return;
                 }
-                this.songs.push({
+                const newSong = {
                     id: Date.now().toString(),
                     title,
                     lyrics,
-                });
+                };
+                this.songs.push(newSong);
+                try { await DB.putSong(newSong); } catch (e) {}
             }
-            this.saveData();
+            await this.saveData();
             this.renderSongs();
             this.closeSongModal();
         },
 
         deleteSong(id) {
-            if (confirm('Are you sure you want to delete this song?')) {
-                this.removeLyric(id);
-                SetlistsManager.getAllSetlists().forEach(s => {
-                    SetlistsManager.removeSongFromSetlist(s.id, id);
-                });
+            const inSetlists = SetlistsManager.getAllSetlists().filter(s => s.songs.includes(id));
+            const count = inSetlists.length;
+            const msg = count ? `Delete this song and update ${count} setlist(s)?` : 'Delete this song?';
+            confirmDialog(msg, async () => {
+                await this.removeLyric(id);
+                inSetlists.forEach(s => SetlistsManager.removeSongFromSetlist(s.id, id));
                 this.renderSongs();
                 this.renderSetlists();
-            }
+                showToast(count ? `Deleted song and updated ${count} setlists.` : 'Deleted song.', 'success');
+            });
         },
 
         handleFileUpload(event) {
@@ -633,12 +1363,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (file.name.endsWith('.docx')) {
                     reader.onload = (e) => {
                         mammoth.extractRawText({ arrayBuffer: e.target.result })
-                            .then(result => {
+                            .then(async result => {
                                 const title = this.normalizeTitle(file.name);
                                 if (this.isDuplicateTitle(title)) return;
                                 const lyrics = result.value;
-                                this.songs.push({ id: Date.now().toString(), title, lyrics });
-                                this.saveData();
+                                const s = { id: Date.now().toString(), title, lyrics };
+                                this.songs.push(s);
+                                try { await DB.putSong(s); } catch {}
+                                await this.saveData();
                                 this.renderSongs();
                             });
                     };
@@ -648,7 +1380,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const title = this.normalizeTitle(file.name);
                         if (this.isDuplicateTitle(title)) return;
                         const lyrics = e.target.result;
-                        this.songs.push({ id: Date.now().toString(), title, lyrics });
+                        const s = { id: Date.now().toString(), title, lyrics };
+                        this.songs.push(s);
+                        try { DB.putSong(s); } catch {}
                         this.saveData();
                         this.renderSongs();
                     };
@@ -773,7 +1507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSetlist() {
             const name = this.setlistNameInput.value.trim();
             if (!name) {
-                alert('Please enter a setlist name');
+                showToast('Please enter a setlist name', 'error');
                 return;
             }
 
@@ -785,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.currentSetlistId = setlist.id;
                 }
             } catch (err) {
-                alert(err.message || 'Could not save setlist.');
+                showToast(err.message || 'Could not save setlist.', 'error');
                 return;
             }
             this.renderSetlists();
@@ -803,11 +1537,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         handleDeleteSetlist() {
             if (!this.currentSetlistId) return;
-            if (confirm('Delete this setlist?')) {
+            confirmDialog('Delete this setlist?', () => {
                 SetlistsManager.deleteSetlist(this.currentSetlistId);
                 this.currentSetlistId = null;
                 this.renderSetlists();
-            }
+                showToast('Deleted setlist.', 'success');
+            });
         },
 
         handleSetlistSelectChange(e) {
@@ -865,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     songs = setlist.songs.map(id => this.songs.find(s => s.id === id)).filter(Boolean);
                 }
             } else {
-                songs = this.songs;
+                songs = this.songs.slice();
             }
 
             if (query) {
@@ -873,6 +1608,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     song.title.toLowerCase().includes(query.toLowerCase()) ||
                     song.lyrics.toLowerCase().includes(query.toLowerCase())
                 );
+            }
+
+            // When showing "All Songs", present the list alphabetically by title
+            if (!this.performanceSetlistId) {
+                songs.sort((a, b) => a.title.localeCompare(b.title));
             }
 
             this.performanceSongList.innerHTML = songs.map(song => `
@@ -897,13 +1637,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (setlist && setlist.songs.length > 0) {
                     this.startPerformanceWithSong(setlist.songs[0]);
                 } else {
-                    alert('No songs in selected setlist');
+                    showToast('No songs in selected setlist', 'info');
                 }
             } else {
                 if (this.songs.length > 0) {
-                    this.startPerformanceWithSong(this.songs[0].id);
+                    const firstId = this.songs
+                        .slice()
+                        .sort((a, b) => a.title.localeCompare(b.title))[0].id;
+                    this.startPerformanceWithSong(firstId);
                 } else {
-                    alert('No songs available');
+                    showToast('No songs available', 'info');
                 }
             }
         },
@@ -939,9 +1682,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result) {
             app.currentSetlistId = result.setlist.id;
             app.renderSetlists();
-            alert(`Imported: ${result.imported} songs.\nNot found: ${result.notFound.length ? result.notFound.join(', ') : 'None'}`);
+            const skipped = result.notFound.length;
+            showToast(`Imported ${result.imported} songs${skipped ? ` (${skipped} not found)` : ''}.`, skipped ? 'info' : 'success');
         } else {
-            alert("Import failed.");
+            showToast('Import failed.', 'error');
         }
     }
 });
