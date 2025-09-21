@@ -130,6 +130,11 @@
 .nav-arrow.left { left: 0.5em; }
 .nav-arrow.right { right: 0.5em; }
 
+/* On touch devices, hide prev/next buttons in favor of swipe navigation */
+@media (pointer: coarse) {
+  .nav-arrow { display: none !important; }
+}
+
 .song-progress {
     font-size: 1.5em;
     color: var(--accent-secondary, #aaa);
@@ -358,8 +363,8 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: none;
-    color: var(--accent-primary);
+    background: var(--accent-primary);
+    color: var(--bg-primary);
     border: none;
     display: flex;
     align-items: center;

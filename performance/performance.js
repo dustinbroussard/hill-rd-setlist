@@ -231,7 +231,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.lyricsDisplay.addEventListener('scroll', () => this.updateScrollButtonsVisibility());
             this.lyricsDisplay.addEventListener('touchstart', () => this.stopAutoScroll());
             this.lyricsDisplay.addEventListener('mousedown', () => this.stopAutoScroll());
+
+            // Touch swipe navigation is handled by the global setupSwipeNav() below
         },
+
 
         // Floating font controls (mobile/tablet) modeled after editor
         initFontControlsMobile() {
