@@ -27,7 +27,7 @@
 .performance-header h2,
 .performance-header .song-info h2 {
     margin: 0;
-    font-size: 1.35em;
+    font-size: 2em;
     line-height: 1.1;
     font-weight: bold;
 }
@@ -63,7 +63,6 @@
     background: var(--accent-hover, #fff);
     color: var(--accent-primary, #222);
     box-shadow: 0 2px 16px var(--accent-glow, #fff8);
-    transform: scale(1.13);
     opacity: 1;
 }
 
@@ -83,9 +82,7 @@
     box-shadow: 0 0 20px 2px var(--danger, #ef4444), 0 0 8px var(--accent-glow, #fff3);
 }
 
-.performance-controls .icon-btn:active {
-    transform: scale(0.96);
-}
+/* Active scale now unified via base .icon-btn:active in style.css */
 
 .performance-controls .icon-btn i {
     font-size: 1.06em;
@@ -134,7 +131,7 @@
 .nav-arrow.right { right: 0.5em; }
 
 .song-progress {
-    font-size: 1.02em;
+    font-size: 1.5em;
     color: var(--accent-secondary, #aaa);
     margin-top: 0.1em;
     margin-bottom: 0.4em;
@@ -316,9 +313,12 @@
     }
     
     .performance-controls .icon-btn {
-    width: 2em;
-    height: 2em;
-    font-size: 1rem;
+      width: 2em;
+      height: 2em;
+      font-size: 1rem;
+   }
+   .song-progress {
+      font-size: 1.25em;
    }
 }
 

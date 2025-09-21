@@ -226,11 +226,15 @@ img, video, iframe {
   color: var(--accent-secondary, #aaa);
   cursor: pointer;
   opacity: 0.85;
-  transition: color 0.22s, opacity 0.15s;
+  transition: color 0.22s, opacity 0.15s, transform 0.15s;
 }
 .icon-btn:hover, .icon-btn:focus {
   color: var(--accent-primary, #fff);
   opacity: 1;
+  transform: scale(1.06);
+}
+.icon-btn:active {
+  transform: scale(0.96);
 }
 
 /* Active mic state */
@@ -366,7 +370,7 @@ img, video, iframe {
 
     .performance-header h2,
     .performance-header .song-info h2 {
-        font-size: 1.1em; /* Smaller song title in performance */
+        font-size: 2em; /* Smaller song title in performance */
     }
 
     .lyrics-container {
@@ -1026,6 +1030,10 @@ img, video, iframe {
         user-select: none;
         transition: opacity 0.15s;
     }
+    #performance-song-info h2 {
+      font-size: 1.5em;
+      margin-bottom: 0.15em;
+    }
 }
 
 /* Loading states */
@@ -1097,18 +1105,13 @@ img, video, iframe {
 .performance-header h2,
 .performance-header .song-info h2 {
     margin: 0;
-    font-size: 1.25em;
+    font-size: 2em;
     line-height: 1.1;
     font-weight: bold;
 }
 
 .performance-controls {
     gap: 0.4em;
-}
-
-#performance-song-info h2 {
-    font-size: 1.13em;
-    margin-bottom: 0.15em;
 }
 
 #font-size-slider.font-slider {
@@ -1368,7 +1371,7 @@ img, video, iframe {
 }
 
 .song-progress {
-  font-size: 1.02em;
+  font-size: 1.5em;
   color: var(--accent-secondary, #aaa);
   margin-top: 0.1em;
   margin-bottom: 0.4em;

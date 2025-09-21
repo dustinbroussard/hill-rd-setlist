@@ -283,32 +283,91 @@ const SetlistsManager = (() => {
 
    function importSetlistFromText(name, text, allSongs) {
     // Normalize and trim setlist name
-    const normalizedName = name.trim();
+    const normalizedName = String(name||'').trim();
     if (!normalizedName) { showToast('Setlist name cannot be empty.', 'error'); return null; }
 
-    // Use Fuse for fuzzy matching
-    const fuse = new Fuse(allSongs, {
-        keys: ['title'],
-        threshold: 0.4,
+    // Helpers for OCR cleanup and normalization
+    const cleanLine = (s) => String(s||'')
+      .replace(/[\u2018\u2019\u201A\u2032\u00B4]/g, "'")
+      .replace(/[\u201C\u201D\u2033]/g, '"')
+      .replace(/[\u2013\u2014\u2212]/g, '-')
+      .replace(/[\u2022\u2023\u25E6\u2043\u2219\u00B7]/g, '') // bullets/middots
+      .replace(/^\s*[•*\-–—]\s*/, '') // leading bullets/dashes
+      .replace(/^\s*\d+[\).\:\-]?\s*/, '') // leading numbering
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    const normalize = (s) => cleanLine(s)
+      .normalize('NFD')
+      .replace(/\p{Diacritic}+/gu, '')
+      .toLowerCase()
+      .replace(/[“”‘’]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\b0\b/g, 'o')
+      .replace(/\b1\b/g, 'l')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    const isChordToken = (tok) => /^[A-G](#|b)?(maj|min|m|sus|add|dim|aug)?\d*(\/[A-G](#|b)?)?$/.test(tok);
+    const isChordLine = (line) => {
+      const toks = cleanLine(line).split(/\s+/).filter(Boolean);
+      if (toks.length < 2 || toks.length > 8) return false;
+      const chordCount = toks.filter(isChordToken).length;
+      return chordCount >= Math.max(2, Math.ceil(toks.length * 0.6));
+    };
+    const isProbableTitle = (line) => {
+      const t = cleanLine(line);
+      if (!t) return false;
+      if (t.length < 2 || t.length > 64) return false;
+      const letters = (t.match(/[A-Za-z]/g)||[]).length;
+      const digits = (t.match(/\d/g)||[]).length;
+      const ratio = letters / Math.max(1, t.length);
+      if (ratio < 0.35) return false;
+      if (digits > letters) return false;
+      if (isChordLine(t)) return false;
+      return true;
+    };
+
+    // Build a search index with normalized titles alongside originals (no DB change)
+    const indexed = (allSongs||[]).map(s => ({ item: s, title: s.title || '', _n: normalize(s.title||'') }));
+    const fuse = new Fuse(indexed, {
+        keys: [
+          { name: 'title', weight: 0.65 },
+          { name: '_n', weight: 0.35 }
+        ],
+        threshold: 0.45,
         includeScore: true,
+        ignoreLocation: true,
+        minMatchCharLength: 2,
+        shouldSort: true,
     });
 
-    // Split text into lines and clean up
-    const titles = text.split('\n')
-        .map(line => line.trim().replace(/^\d+[\).\:\-]?\s*/, ''))  // Strip "1.", "2)", etc.
-        .filter(line => line.length > 0);
+    // Split text into lines, filter likely titles, dedupe
+    let lines = String(text||'').split(/\r?\n/)
+      .map(cleanLine)
+      .filter(Boolean)
+      .filter(isProbableTitle);
+    // Dedupe nearby duplicates
+    const seen = new Set();
+    lines = lines.filter(l => { const k = normalize(l); if (seen.has(k)) return false; seen.add(k); return true; });
 
     const songIds = [];
     const notFound = [];
 
-    titles.forEach(title => {
-        const results = fuse.search(title);
-        if (results.length && results[0].score <= 0.5) {
-            songIds.push(results[0].item.id);
-        } else {
-            notFound.push(title);
-        }
-    });
+    const tryMatch = (q) => {
+      const results = fuse.search(q);
+      if (!results.length) return null;
+      const best = results[0];
+      // Accept if reasonably close; calibrate using score and length
+      if (best.score <= 0.5) return best.item.item.id;
+      return null;
+    };
+
+    for (const line of lines) {
+      // Try original, then normalized, then with common OCR digit->letter swaps
+      const variants = [line, normalize(line), normalize(line).replace(/0/g,'o').replace(/1/g,'l').replace(/5/g,'s')];
+      let matchedId = null;
+      for (const v of variants) { matchedId = tryMatch(v); if (matchedId) break; }
+      if (matchedId) songIds.push(matchedId); else notFound.push(line);
+    }
 
     if (songIds.length === 0) { showToast('No matching songs found to import.', 'info'); return null; }
 
@@ -444,9 +503,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="text" id="song-search-input" class="search-input" placeholder="Search songs...">
                 <button id="song-voice-btn" class="icon-btn" title="Voice search"><i class="fas fa-microphone"></i></button>
                 <div class="toolbar-buttons-group">
-                    <button id="add-song-btn" class="btn"><i class="fas fa-plus"></i></button>
-                    <button id="delete-all-songs-btn" class="btn danger"><i class="fas fa-trash"></i></button>
-                    <label for="song-upload-input" class="btn"><i class="fas fa-upload"></i></label>
+                    <label for="song-upload-input" class="btn" title="Upload"><i class="fas fa-upload"></i></label>
+                    <button id="delete-all-songs-btn" class="btn danger" title="Delete All"><i class="fas fa-trash"></i></button>
+                    <button id="add-song-btn" class="btn" title="Add Song"><i class="fas fa-plus"></i></button>
                 </div>
                 <input type="file" id="song-upload-input" multiple accept=".txt,.docx" class="hidden-file">
             `,
@@ -568,11 +627,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 showToast('Running OCR on image…', 'info', 2000);
-                const { data } = await Tesseract.recognize(file, 'eng', {
-                    workerPath: 'lib/tesseract/worker.min.js',
-                    corePath: 'lib/tesseract/tesseract-core.wasm',
-                    langPath: 'lib/tesseract'
-                });
+                const tessBase = `${window.location.origin}/lib/tesseract`;
+                // Proactively check headers; choose CDN first if local looks mis-served
+                const hdr = await this.checkTesseractLangHeaders(tessBase);
+                let data;
+                // Prefer CDN lang first if local headers look wrong
+                const attemptConfigs = (hdr && hdr.ok) ? [
+                  { workerPath: `${tessBase}/worker.min.js`, corePath: `${tessBase}/tesseract-core-simd.wasm.js`, langPath: `${tessBase}` },
+                  { workerPath: `${tessBase}/worker.min.js`, corePath: `${tessBase}/tesseract-core-simd.wasm.js`, langPath: 'https://tessdata.projectnaptha.com/4.0.0' }
+                ] : [
+                  { workerPath: `${tessBase}/worker.min.js`, corePath: `${tessBase}/tesseract-core-simd.wasm.js`, langPath: 'https://tessdata.projectnaptha.com/4.0.0' },
+                  { workerPath: `${tessBase}/worker.min.js`, corePath: `${tessBase}/tesseract-core-simd.wasm.js`, langPath: `${tessBase}` }
+                ];
+                let lastErr;
+                for (const cfg of attemptConfigs) {
+                  try {
+                    ({ data } = await Tesseract.recognize(file, 'eng', cfg));
+                    lastErr = null;
+                    break;
+                  } catch (e) { lastErr = e; }
+                }
+                if (lastErr) throw lastErr;
                 let text = (data && data.text) ? data.text : '';
                 text = String(text).replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n');
                 if (!text.trim()) { showToast('No text detected in image.', 'info'); return; }
@@ -596,6 +671,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById('import-setlist-image');
                 if (el) el.value = '';
             }
+        },
+
+        // Verify headers for local eng.traineddata.gz to avoid OCR failures
+        async checkTesseractLangHeaders(tessBase) {
+            try {
+                const url = `${tessBase}/eng.traineddata.gz`;
+                const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+                if (!res.ok) return { ok: false, reason: 'not-ok' };
+                const enc = (res.headers.get('content-encoding') || '').toLowerCase();
+                const type = (res.headers.get('content-type') || '').toLowerCase();
+                if (enc.includes('gzip')) {
+                    console.warn('eng.traineddata.gz is served with Content-Encoding:gzip. Serve it without Content-Encoding.');
+                    showToast('OCR note: fix eng.traineddata.gz headers (no Content-Encoding).', 'info', 4500);
+                    return { ok: false, reason: 'encoded-gzip' };
+                }
+                if (type && (type.includes('text') || type.includes('html'))) {
+                    console.warn('eng.traineddata.gz served with text/* Content-Type. Prefer application/octet-stream.');
+                }
+                return { ok: true };
+            } catch (_) { return { ok: false, reason: 'head-failed' }; }
         },
 
         // Attach speech-to-text to an input + button pair
@@ -715,11 +810,29 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         searchLyrics(query) {
-            query = query.trim().toLowerCase();
-            return this.songs.filter(song =>
-                song.title.toLowerCase().includes(query) ||
-                (song.lyrics && song.lyrics.toLowerCase().includes(query))
-            );
+            const q = String(query || '').trim();
+            if (!q) return this.songs.slice();
+            // Use Fuse.js for fuzzy search across title and lyrics
+            try {
+                const fuse = new Fuse(this.songs, {
+                    keys: [
+                        { name: 'title', weight: 0.75 },
+                        { name: 'lyrics', weight: 0.25 }
+                    ],
+                    includeScore: true,
+                    threshold: 0.35,
+                    ignoreLocation: true,
+                    minMatchCharLength: 2,
+                });
+                return fuse.search(q).map(r => r.item);
+            } catch (e) {
+                // Fallback to simple includes if Fuse isn't available
+                const low = q.toLowerCase();
+                return this.songs.filter(song =>
+                    song.title.toLowerCase().includes(low) ||
+                    (song.lyrics && song.lyrics.toLowerCase().includes(low))
+                );
+            }
         },
 
         renameLyric(id, newTitle) {
@@ -1329,9 +1442,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Song UI and Actions
         renderSongs() {
-            const query = this.songSearchInput.value.toLowerCase();
-            const filteredSongs = this.searchLyrics(query)
-                .sort((a, b) => a.title.localeCompare(b.title));
+            // Empty state when there are no songs in the DB
+            if (!Array.isArray(this.songs) || this.songs.length === 0) {
+                this.songList.innerHTML = `
+                    <div class="empty-message">
+                      <p>Upload songs (<code>.txt</code>, <code>.docx</code>) to get started.</p>
+                      <button id="upload-hint-btn" class="btn primary">
+                        <i class="fas fa-upload"></i> Upload Songs
+                      </button>
+                    </div>
+                `;
+                // Wire the hint button to the hidden file input
+                const hintBtn = document.getElementById('upload-hint-btn');
+                if (hintBtn) {
+                    hintBtn.addEventListener('click', () => {
+                        document.getElementById('song-upload-input')?.click();
+                    });
+                }
+                return;
+            }
+
+            const query = (this.songSearchInput?.value || '').trim();
+            const filteredSongs = !query
+                ? this.searchLyrics(query).sort((a, b) => a.title.localeCompare(b.title))
+                : this.searchLyrics(query); // Keep Fuse relevance order when searching
             this.songList.innerHTML = filteredSongs.map(song => `
                 <div class="song-item" data-id="${song.id}">
                     <span>${song.title}</span>
@@ -1416,39 +1550,60 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         },
 
-        handleFileUpload(event) {
-            const files = event.target.files;
-            for (const file of files) {
-                const reader = new FileReader();
-                if (file.name.endsWith('.docx')) {
-                    reader.onload = (e) => {
-                        mammoth.extractRawText({ arrayBuffer: e.target.result })
-                            .then(async result => {
-                                const title = this.normalizeTitle(file.name);
-                                if (this.isDuplicateTitle(title)) return;
-                                const lyrics = result.value;
-                                const s = { id: Date.now().toString(), title, lyrics };
-                                this.songs.push(s);
-                                try { await DB.putSong(s); } catch {}
-                                await this.saveData();
-                                this.renderSongs();
-                            });
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    reader.onload = (e) => {
-                        const title = this.normalizeTitle(file.name);
-                        if (this.isDuplicateTitle(title)) return;
-                        const lyrics = e.target.result;
-                        const s = { id: Date.now().toString(), title, lyrics };
-                        this.songs.push(s);
-                        try { DB.putSong(s); } catch {}
-                        this.saveData();
-                        this.renderSongs();
-                    };
-                    reader.readAsText(file);
+        async handleFileUpload(event) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            let imported = 0, skipped = 0, failed = 0;
+
+            const readAsArrayBuffer = (file) => new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onerror = () => reject(new Error('read-failed'));
+                r.onload = () => resolve(r.result);
+                r.readAsArrayBuffer(file);
+            });
+            const readAsText = (file) => new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onerror = () => reject(new Error('read-failed'));
+                r.onload = () => resolve(r.result);
+                r.readAsText(file);
+            });
+
+            const tasks = files.map(async (file) => {
+                try {
+                    const title = this.normalizeTitle(file.name);
+                    if (this.isDuplicateTitle(title)) { skipped++; return; }
+                    let lyrics = '';
+                    if (/\.docx$/i.test(file.name)) {
+                        const buf = await readAsArrayBuffer(file);
+                        const res = await mammoth.extractRawText({ arrayBuffer: buf });
+                        lyrics = String(res?.value || '');
+                    } else {
+                        lyrics = String(await readAsText(file));
+                    }
+                    const s = { id: Date.now().toString() + Math.random().toString(16).slice(2), title, lyrics };
+                    this.songs.push(s);
+                    try { await DB.putSong(s); } catch {}
+                    imported++;
+                } catch (e) {
+                    console.warn('Upload import failed for', file?.name, e);
+                    failed++;
                 }
-            }
+            });
+
+            await Promise.all(tasks);
+            try { await this.saveData(); } catch {}
+            this.renderSongs();
+
+            // Reset input for subsequent imports
+            event.target.value = '';
+
+            const parts = [];
+            if (imported) parts.push(`${imported} imported`);
+            if (skipped) parts.push(`${skipped} skipped (duplicates)`);
+            if (failed) parts.push(`${failed} failed`);
+            const msg = parts.length ? `Upload complete: ${parts.join(', ')}.` : 'No files were imported.';
+            showToast(msg, imported ? 'success' : 'info', 4000);
         },
 
         // Setlist Management
@@ -1659,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderPerformanceSongList() {
             let songs = [];
-            const query = this.performanceSongSearch.value.trim();
+            const query = (this.performanceSongSearch?.value || '').trim();
 
             if (this.performanceSetlistId) {
                 const setlist = SetlistsManager.getSetlistById(this.performanceSetlistId);
@@ -1671,14 +1826,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (query) {
-                songs = songs.filter(song =>
-                    song.title.toLowerCase().includes(query.toLowerCase()) ||
-                    song.lyrics.toLowerCase().includes(query.toLowerCase())
-                );
+                try {
+                    const fuse = new Fuse(songs, {
+                        keys: [
+                            { name: 'title', weight: 0.85 },
+                            { name: 'lyrics', weight: 0.15 }
+                        ],
+                        includeScore: true,
+                        threshold: 0.35,
+                        ignoreLocation: true,
+                        minMatchCharLength: 2,
+                    });
+                    songs = fuse.search(query).map(r => r.item);
+                } catch (e) {
+                    const low = query.toLowerCase();
+                    songs = songs.filter(song =>
+                        song.title.toLowerCase().includes(low) ||
+                        (song.lyrics && song.lyrics.toLowerCase().includes(low))
+                    );
+                }
             }
 
-            // When showing "All Songs", present the list alphabetically by title
-            if (!this.performanceSetlistId) {
+            // When showing "All Songs", present the list alphabetically by title if no query
+            if (!this.performanceSetlistId && !query) {
                 songs.sort((a, b) => a.title.localeCompare(b.title));
             }
 

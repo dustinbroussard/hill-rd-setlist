@@ -16,7 +16,9 @@ const urlsToCache = [
     'lib/tesseract/tesseract.min.js',
     'lib/tesseract/worker.min.js',
     'lib/tesseract/tesseract-core.wasm',
-    'lib/tesseract/eng.traineddata.gz',
+    'lib/tesseract/tesseract-core-simd.wasm.js',
+    'lib/tesseract/tesseract-core-simd.wasm',
+    // Do NOT precache traineddata to avoid decompression/caching pitfalls
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
     'https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js'
 ];
@@ -49,13 +51,43 @@ self.addEventListener('fetch', event => {
     const cache = await caches.open(CACHE_NAME);
     try {
       const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
-      const cached = await caches.match(req, isHTML ? { ignoreSearch: true } : undefined);
+      const urlObj = new URL(req.url);
+      const isTrainedData = urlObj.pathname.endsWith('/lib/tesseract/eng.traineddata') || urlObj.pathname.endsWith('/lib/tesseract/eng.traineddata.gz');
+
+      // Prefer cached HTML ignoring search so /performance/performance.html?x matches
+      const cached = isTrainedData ? undefined : await caches.match(req, isHTML ? { ignoreSearch: true } : undefined);
       if (cached) return cached;
 
-      const res = await fetch(req);
+      let res;
+      if (isHTML) {
+        // SPA routing: for navigations to non-performance paths, serve /index.html
+        if (!urlObj.pathname.startsWith('/performance/')) {
+          const indexKey = new Request('/index.html');
+          const cachedIndex = await caches.match(indexKey);
+          if (cachedIndex) return cachedIndex;
+          res = await fetch('/index.html', { redirect: 'follow' });
+          if (res && res.status === 200) cache.put(indexKey, res.clone());
+        } else {
+          // For performance navigations, always serve the base document without query
+          const perfKey = new Request('/performance/performance.html');
+          const cachedPerf = await caches.match(perfKey);
+          if (cachedPerf) return cachedPerf;
+          res = await fetch('/performance/performance.html', { redirect: 'follow' });
+          if (res && res.status === 200) cache.put(perfKey, res.clone());
+        }
+      } else {
+        if (isTrainedData) {
+          // Always fetch traineddata fresh; do not cache or transform
+          res = await fetch(req.url, { redirect: 'follow', cache: 'no-store' });
+        } else {
+        res = await fetch(req);
+        }
+      }
+
       // Cache same-origin successful responses
-      if (res && res.status === 200 && req.url.startsWith(self.location.origin)) {
-        cache.put(req, res.clone());
+      if (!isTrainedData && res && res.status === 200 && req.url.startsWith(self.location.origin)) {
+        const key = isHTML ? new Request(new URL(req.url).pathname) : req;
+        cache.put(key, res.clone());
       }
       return res;
     } catch (err) {
