@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hill-rd-setlist-manager-v3';
+const CACHE_NAME = 'hill-rd-setlist-manager-v4';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -49,6 +49,17 @@ self.addEventListener('fetch', event => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
+    const stripRedirect = async (response) => {
+      try {
+        if (!response || !response.redirected) return response;
+        const body = await response.clone().blob();
+        return new Response(body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
+      } catch (e) { return response; }
+    };
     try {
       const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
       const urlObj = new URL(req.url);
@@ -66,6 +77,7 @@ self.addEventListener('fetch', event => {
           const cachedIndex = await caches.match(indexKey);
           if (cachedIndex) return cachedIndex;
           res = await fetch('/index.html', { redirect: 'follow' });
+          res = await stripRedirect(res);
           if (res && res.status === 200) cache.put(indexKey, res.clone());
         } else {
           // For performance navigations, always serve the base document without query
@@ -73,14 +85,17 @@ self.addEventListener('fetch', event => {
           const cachedPerf = await caches.match(perfKey);
           if (cachedPerf) return cachedPerf;
           res = await fetch('/performance/performance.html', { redirect: 'follow' });
+          res = await stripRedirect(res);
           if (res && res.status === 200) cache.put(perfKey, res.clone());
         }
       } else {
         if (isTrainedData) {
           // Always fetch traineddata fresh; do not cache or transform
           res = await fetch(req.url, { redirect: 'follow', cache: 'no-store' });
+          res = await stripRedirect(res);
         } else {
         res = await fetch(req);
+        res = await stripRedirect(res);
         }
       }
 

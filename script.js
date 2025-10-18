@@ -908,9 +908,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const options = document.getElementById('export-format-options');
             if (!options) return;
             if (what === 'everything') {
-                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label>';
+                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON (songs + setlists)</label> <label><input type="radio" name="export-format" value="json-songs"> LyricSmith Library (songs only)</label>';
             } else if (what === 'songs') {
-                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label> <label><input type="radio" name="export-format" value="csv"> CSV</label> <label><input type="radio" name="export-format" value="txt"> TXT (one file)</label> <label><input type="radio" name="export-format" value="txt-separate"> TXT (separate files)</label> <label><input type="radio" name="export-format" value="pdf"> PDF</label>';
+                options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON (array)</label> <label><input type="radio" name="export-format" value="json-lyricsmith"> LyricSmith JSON</label> <label><input type="radio" name="export-format" value="csv"> CSV</label> <label><input type="radio" name="export-format" value="txt"> TXT (one file)</label> <label><input type="radio" name="export-format" value="txt-separate"> TXT (separate files)</label> <label><input type="radio" name="export-format" value="pdf"> PDF</label>';
             } else {
                 options.innerHTML = '<label><input type="radio" name="export-format" value="json" checked> JSON</label> <label><input type="radio" name="export-format" value="txt"> TXT list</label> <label><input type="radio" name="export-format" value="pdf"> PDF</label>';
             }
@@ -921,8 +921,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const format = (document.querySelector('input[name="export-format"]:checked')?.value)||'json';
             try {
                 if (what === 'everything') {
-                    const blob = this.exportEverything();
-                    this.downloadFile('setlist-backup.json', blob, 'application/json');
+                    if (format === 'json-songs') {
+                        const payload = { songs: this.songs };
+                        this.downloadFile('lyricsmith-library.json', JSON.stringify(payload, null, 2), 'application/json');
+                    } else {
+                        const blob = this.exportEverything();
+                        this.downloadFile('setlist-backup.json', blob, 'application/json');
+                    }
                 } else if (what === 'songs') {
                     if (format === 'pdf') {
                         this.exportSongsPDF();
@@ -965,10 +970,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 html, body { height: 100%; }
                 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; }
                 /* Fixed-height page area: page height minus margins */
-                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 1.5in); text-align: center; box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; }
+                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; height: calc(100vh - 1.5in); box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; text-align: left; }
                 .song:last-child { page-break-after: auto; }
-                h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.6em; }
-                .lyrics { font-size: 1em; white-space: pre-wrap; line-height: 1.4; }
+                h1 { font-weight: 700; margin: 0 0 0.6em; line-height: 1.15; }
+                .lyrics { white-space: pre-wrap; line-height: 1.4; overflow-wrap: anywhere; hyphens: auto; }
                 /* On screen, add some padding */
                 @media screen { body { background:#f5f5f5; } .song { box-sizing: border-box; width: 8.27in; height: 11.69in; margin: 12px auto; background:#fff; border: 1px solid #ddd; padding: 0.75in; } }
             </style></head><body>`);
@@ -977,40 +982,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lyrics = escapeHTML(s.lyrics || '');
                 htmlParts.push(`<section class="song"><h1>${title}</h1><div class="lyrics">${lyrics}</div></section>`);
             }
-            // Inject autofit + auto-print logic
+            // Inject improved autofit + auto-print logic
             htmlParts.push(`<script>
               (function(){
-                function fits(page, sizePt){
-                  page.style.fontSize = sizePt + 'pt';
-                  // force reflow
+                function fits(page){
+                  // small safety margin to avoid last-line cutoff
+                  return page.scrollHeight <= page.clientHeight - 1;
+                }
+                function applySizes(page, tSize, lSize, lHeight){
+                  const title = page.querySelector('h1');
+                  const lyrics = page.querySelector('.lyrics');
+                  if (title) title.style.fontSize = tSize + 'pt';
+                  if (lyrics) { lyrics.style.fontSize = lSize + 'pt'; lyrics.style.lineHeight = lHeight; }
+                  // reflow
                   void page.offsetHeight;
-                  return page.scrollHeight <= page.clientHeight + 0.5;
                 }
                 function fitPage(page){
-                  let low = 8, high = 28;
-                  if (fits(page, high)){
-                    let next = high;
-                    for (let i=0; i<12; i++){
-                      next = Math.min(next * 1.25, 96);
-                      if (fits(page, next)) { low = next; high = Math.min(next * 1.25, 96); }
-                      else { high = next; break; }
+                  const titleMin = 16;
+                  let titleSize = 26; // start large
+                  let lyricsLow = 9, lyricsHigh = 20;
+                  let lyricsSize = lyricsHigh;
+                  let lineHeight = 1.4;
+
+                  applySizes(page, titleSize, lyricsSize, lineHeight);
+                  // Shrink lyrics first via binary search
+                  if (!fits(page)){
+                    let low = lyricsLow, high = lyricsHigh;
+                    for (let i=0; i<14; i++){
+                      const mid = Math.floor((low + high) / 2);
+                      applySizes(page, titleSize, mid, lineHeight);
+                      if (fits(page)) { lyricsSize = mid; low = mid; }
+                      else { high = mid - 1; }
+                      if (high <= low) break;
                     }
-                  } else {
-                    while (!fits(page, high) && high > 6) high -= 2;
-                    low = Math.max(6, high - 2);
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
                   }
-                  for (let i=0; i<14; i++){
-                    const mid = (low + high) / 2;
-                    if (fits(page, mid)) low = mid; else high = mid;
+                  // If still overflowing, start shrinking the title
+                  while (!fits(page) && titleSize > titleMin){
+                    titleSize -= 2;
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
                   }
-                  page.style.fontSize = low + 'pt';
+                  // If still overflowing, tighten lyrics line-height a bit
+                  if (!fits(page)){
+                    lineHeight = 1.28;
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
+                  }
+                  // As a last resort, reduce internal padding slightly to gain space
+                  if (!fits(page)){
+                    page.style.padding = '0.6in';
+                    void page.offsetHeight;
+                  }
                 }
                 function fitAll(){
                   const pages = document.querySelectorAll('.song');
-                  pages.forEach(p => { p.style.fontSize = '14pt'; });
+                  pages.forEach(p => {
+                    // reset any inline styles
+                    p.removeAttribute('style');
+                    const t = p.querySelector('h1'); const l = p.querySelector('.lyrics');
+                    if (t) t.removeAttribute('style'); if (l) l.removeAttribute('style');
+                  });
                   requestAnimationFrame(() => {
                     pages.forEach(p => fitPage(p));
-                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 100);
+                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 200);
                   });
                 }
                 if (document.readyState === 'complete') fitAll();
@@ -1031,6 +1064,15 @@ document.addEventListener('DOMContentLoaded', () => {
         exportSongs({ format }) {
             const songs = this.songs.slice();
             if (format === 'json') return { content: JSON.stringify(songs, null, 2), mime: 'application/json', ext: 'json' };
+            if (format === 'json-lyricsmith') {
+                const payload = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    songCount: songs.length,
+                    songs
+                };
+                return { content: JSON.stringify(payload, null, 2), mime: 'application/json', ext: 'json' };
+            }
             if (format === 'csv') {
                 const header = 'Title,Lyrics\n';
                 const esc = (s)=> '"'+String(s||'').replace(/"/g,'""')+'"';
@@ -1207,10 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 @page { size: A4; margin: 0.75in; }
                 html, body { height: 100%; }
                 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; }
-                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 1.5in); text-align: center; box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; }
+                .song { page-break-after: always; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; height: calc(100vh - 1.5in); box-sizing: border-box; padding: 0.75in; overflow: hidden; font-size: 14pt; text-align: left; }
                 .song:last-child { page-break-after: auto; }
-                h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.6em; }
-                .lyrics { font-size: 1em; white-space: pre-wrap; line-height: 1.4; }
+                h1 { font-weight: 700; margin: 0 0 0.6em; line-height: 1.15; }
+                .lyrics { white-space: pre-wrap; line-height: 1.4; overflow-wrap: anywhere; hyphens: auto; }
                 @media screen { body { background:#f5f5f5; } .song { box-sizing: border-box; width: 8.27in; height: 11.69in; margin: 12px auto; background:#fff; border: 1px solid #ddd; padding: 0.75in; } }
             </style></head><body>`);
             for (const s of songsInOrder) {
@@ -1220,36 +1262,57 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             htmlParts.push(`<script>
               (function(){
-                function fits(page, sizePt){
-                  page.style.fontSize = sizePt + 'pt';
+                function fits(page){
+                  return page.scrollHeight <= page.clientHeight - 1;
+                }
+                function applySizes(page, tSize, lSize, lHeight){
+                  const title = page.querySelector('h1');
+                  const lyrics = page.querySelector('.lyrics');
+                  if (title) title.style.fontSize = tSize + 'pt';
+                  if (lyrics) { lyrics.style.fontSize = lSize + 'pt'; lyrics.style.lineHeight = lHeight; }
                   void page.offsetHeight;
-                  return page.scrollHeight <= page.clientHeight + 0.5;
                 }
                 function fitPage(page){
-                  let low = 8, high = 28;
-                  if (fits(page, high)){
-                    let next = high;
-                    for (let i=0; i<12; i++){
-                      next = Math.min(next * 1.25, 96);
-                      if (fits(page, next)) { low = next; high = Math.min(next * 1.25, 96); }
-                      else { high = next; break; }
+                  const titleMin = 16;
+                  let titleSize = 26;
+                  let lyricsLow = 9, lyricsHigh = 20;
+                  let lyricsSize = lyricsHigh;
+                  let lineHeight = 1.4;
+                  applySizes(page, titleSize, lyricsSize, lineHeight);
+                  if (!fits(page)){
+                    let low = lyricsLow, high = lyricsHigh;
+                    for (let i=0; i<14; i++){
+                      const mid = Math.floor((low + high) / 2);
+                      applySizes(page, titleSize, mid, lineHeight);
+                      if (fits(page)) { lyricsSize = mid; low = mid; }
+                      else { high = mid - 1; }
+                      if (high <= low) break;
                     }
-                  } else {
-                    while (!fits(page, high) && high > 6) high -= 2;
-                    low = Math.max(6, high - 2);
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
                   }
-                  for (let i=0; i<14; i++){
-                    const mid = (low + high) / 2;
-                    if (fits(page, mid)) low = mid; else high = mid;
+                  while (!fits(page) && titleSize > titleMin){
+                    titleSize -= 2;
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
                   }
-                  page.style.fontSize = low + 'pt';
+                  if (!fits(page)){
+                    lineHeight = 1.28;
+                    applySizes(page, titleSize, lyricsSize, lineHeight);
+                  }
+                  if (!fits(page)){
+                    page.style.padding = '0.6in';
+                    void page.offsetHeight;
+                  }
                 }
                 function fitAll(){
                   const pages = document.querySelectorAll('.song');
-                  pages.forEach(p => { p.style.fontSize = '14pt'; });
+                  pages.forEach(p => {
+                    p.removeAttribute('style');
+                    const t = p.querySelector('h1'); const l = p.querySelector('.lyrics');
+                    if (t) t.removeAttribute('style'); if (l) l.removeAttribute('style');
+                  });
                   requestAnimationFrame(() => {
                     pages.forEach(p => fitPage(p));
-                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 100);
+                    setTimeout(() => { try { window.focus(); window.print(); } catch(e){} }, 200);
                   });
                 }
                 if (document.readyState === 'complete') fitAll();
@@ -1327,8 +1390,29 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const file of fileList) {
                 if (/\.json$/i.test(file.name)) {
                     const text = await file.text();
-                    const arr = JSON.parse(text);
-                    for (const s of arr) await addOne(s);
+                    let parsed;
+                    try { parsed = JSON.parse(text); } catch { parsed = null; }
+                    if (!parsed) continue;
+                    // Accept multiple formats:
+                    // - Array of songs [{ title, lyrics, ... }]
+                    // - Object with { songs: [...] } (e.g., LyricSmith export or full backups)
+                    // - Object with { setlist, songs } or Array of such (import just the songs)
+                    let songsToAdd = [];
+                    if (Array.isArray(parsed)) {
+                        // Could be an array of songs, or an array of { setlist, songs }
+                        if (parsed.length && parsed[0] && typeof parsed[0] === 'object' && 'setlist' in parsed[0] && 'songs' in parsed[0]) {
+                            for (const entry of parsed) { if (entry && Array.isArray(entry.songs)) songsToAdd.push(...entry.songs); }
+                        } else {
+                            songsToAdd = parsed;
+                        }
+                    } else if (parsed && typeof parsed === 'object') {
+                        if (Array.isArray(parsed.songs)) {
+                            songsToAdd = parsed.songs;
+                        } else if (parsed.setlist && Array.isArray(parsed.songs)) {
+                            songsToAdd = parsed.songs;
+                        }
+                    }
+                    for (const s of songsToAdd) await addOne(s);
                 } else if (/\.csv$/i.test(file.name)) {
                     const text = await file.text();
                     const rows = this.parseCSV(text);

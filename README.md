@@ -75,6 +75,22 @@ A **modern, touch-friendly web app** for musicians to manage setlists and lyrics
 - Import setlists from an image (OCR): click the image button, pick a photo of the setlist, confirm the name, and fuzzy-match to your library.
 - Export setlists as JSON, TXT, CSV, or PDF.
 
+### JSON Compatibility
+- Imports LyricSmith JSON exports directly:
+  - Use Import → Restore (JSON backup) for LyricSmith library files (`{ songs: [...] }`).
+  - Import Songs also accepts plain arrays of songs (`[ { title, lyrics, ... } ]`).
+- Setlist JSON exports from this app can be imported into LyricSmith; it will import the song content.
+
+### LyricSmith Library Export
+- When exporting Songs, you can choose:
+  - `JSON (array)`: `[ { title, lyrics, ... } ]` — also compatible with LyricSmith.
+  - `LyricSmith JSON`: `{ version, exportDate, songCount, songs: [...] }` — matches LyricSmith’s default export shape.
+
+### Everything Export
+- Under Export → Everything, you can now pick:
+  - `JSON (songs + setlists)`: Full backup for this app.
+  - `LyricSmith Library (songs only)`: `{ songs: [...] }` for quick import into LyricSmith.
+
 ### **Performance (Lyrics) Tab**
 - Pick a setlist and enter performance mode.
 - Fullscreen, responsive, touch-optimized display.
@@ -214,4 +230,3 @@ Tips for great screenshots:
 
 - Drag-and-drop reordering isn’t working
   - Ensure you’re interacting in the Setlists tab’s right column (Current Setlist). Some mobile browsers need a firm press before dragging.
-
